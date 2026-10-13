@@ -1,0 +1,4 @@
+web-ui-design(skill)/
+.DS_Store
+*.pyc
+__pycache__/
