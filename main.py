@@ -285,31 +285,34 @@ def main(page: ft.Page):
              a["lines_added"], a["lines_removed"])
             for a in agents_data
         )
-        if fp == state["agents_fp"]:
-            return
-        state["agents_fp"] = fp
+        if fp != state["agents_fp"]:
+            state["agents_fp"] = fp
 
-        online = sum(1 for a in agents_data if a["status"] == "ONLINE")
-        agents_header_text.value = f"{online} / {len(agents_data)} online"
+            online = sum(1 for a in agents_data if a["status"] == "ONLINE")
+            agents_header_text.value = f"{online} / {len(agents_data)} online"
 
-        agents_column.controls.clear()
-        if not agents_data:
-            agents_column.controls.append(_empty_state(
-                ft.Icons.HUB,
-                "No agents connected yet",
-                f"Plug {MCP_URL} into Cursor, Claude Desktop, or your agent script. "
-                "Agents appear here under the exact ID they declare.",
-            ))
-        else:
-            # Keep the selected agent pinned in view order; others by name.
-            ordered = sorted(
-                agents_data,
-                key=lambda a: (a["id"] != state["selected_agent"], a["id"]),
-            )
-            for agent in ordered:
-                agents_column.controls.append(_agent_row(agent))
+            agents_column.controls.clear()
+            if not agents_data:
+                agents_column.controls.append(_empty_state(
+                    ft.Icons.HUB,
+                    "No agents connected yet",
+                    f"Plug {MCP_URL} into Cursor, Claude Desktop, or your agent script. "
+                    "Agents appear here under the exact ID they declare.",
+                ))
+            else:
+                # Keep the selected agent pinned in view order; others by name.
+                ordered = sorted(
+                    agents_data,
+                    key=lambda a: (a["id"] != state["selected_agent"], a["id"]),
+                )
+                for agent in ordered:
+                    agents_column.controls.append(_agent_row(agent))
 
-        render_code_stats(agents_data)
+            render_code_stats(agents_data)
+
+        # Always keep the tab bar and chat in sync — selection changes
+        # (clicking a tab or agent row) don't alter the roster fingerprint,
+        # but must still re-render the center panel.
         sync_tabs(agents_data)
         render_chat()
         page.update()
@@ -458,7 +461,6 @@ def main(page: ft.Page):
         if mesh_room:
             title = f"{msg['from']} → {msg['to']}"
         else:
-            peer = msg['from'] if msg['from'] != state['tab'] else msg['to']
             title = ("↳ broadcast heard" if is_broadcast and msg['from'] != state['tab']
                      else f"{msg['from']} → {msg['to']}")
         accent = COLOR_MUTED if is_code else COLOR_ACCENT
