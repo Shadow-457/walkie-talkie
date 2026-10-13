@@ -58,17 +58,6 @@ COLOR_ACCENT_SOFT = "#1e2c23"  # tinted green chip wash
 
 POLL_SECONDS = 0.4  # UI refresh cadence; cheap because sections diff first
 
-# App zoom (Ctrl + / Ctrl - / Ctrl 0, or the top-bar zoom controls)
-ZOOM_MIN = 0.5
-ZOOM_MAX = 2.0
-ZOOM_STEP = 0.1
-
-
-def _clamp_zoom(value: float) -> float:
-    """Keep the zoom factor inside [ZOOM_MIN, ZOOM_MAX], snapped to steps."""
-    value = round(value, 2)
-    return max(ZOOM_MIN, min(ZOOM_MAX, value))
-
 hub = MeshHub()
 server = MCPServer(hub=hub, host=HOST, port=PORT)
 
@@ -208,58 +197,6 @@ def main(page: ft.Page):
         on_click=copy_url,
     )
 
-    # --- Zoom controls (Ctrl + / Ctrl - / Ctrl 0 also work) ---------------
-    zoom_state = {"z": 1.0}
-    zoom_label = ft.Container(
-        ink=True,
-        on_click=lambda e: apply_zoom(1.0),  # click the % to reset
-        tooltip="Reset zoom (Ctrl+0)",
-        padding=ft.Padding.symmetric(horizontal=8, vertical=8),
-        content=ft.Text("100%", size=11, weight=ft.FontWeight.BOLD,
-                        font_family="Outfit Bold", color=COLOR_MUTED),
-    )
-    zoom_out_btn = ft.Button(
-        content=ft.Icon(ft.Icons.ZOOM_OUT, size=15, color=COLOR_TEXT),
-        tooltip="Zoom out (Ctrl+-)",
-        style=ft.ButtonStyle(
-            shape=ft.RoundedRectangleBorder(radius=0),
-            bgcolor=COLOR_SURFACE,
-            side=ft.BorderSide(1, COLOR_BORDER),
-            padding=ft.Padding.symmetric(horizontal=8, vertical=8),
-        ),
-        on_click=lambda e: apply_zoom(zoom_state["z"] - ZOOM_STEP),
-    )
-    zoom_in_btn = ft.Button(
-        content=ft.Icon(ft.Icons.ZOOM_IN, size=15, color=COLOR_TEXT),
-        tooltip="Zoom in (Ctrl+=)",
-        style=ft.ButtonStyle(
-            shape=ft.RoundedRectangleBorder(radius=0),
-            bgcolor=COLOR_SURFACE,
-            side=ft.BorderSide(1, COLOR_BORDER),
-            padding=ft.Padding.symmetric(horizontal=8, vertical=8),
-        ),
-        on_click=lambda e: apply_zoom(zoom_state["z"] + ZOOM_STEP),
-    )
-
-    def apply_zoom(value: float):
-        zoom_state["z"] = _clamp_zoom(value)
-        zoom_root.scale = ft.Scale(
-            scale=zoom_state["z"], origin=ft.Alignment.TOP_LEFT,
-        )
-        zoom_label.content.value = f"{int(round(zoom_state['z'] * 100))}%"
-        page.update()
-
-    def on_keyboard(e):
-        if not (getattr(e, "ctrl", False) or getattr(e, "meta", False)):
-            return
-        key = (getattr(e, "key", "") or "").lower()
-        if key in ("=", "+"):
-            apply_zoom(zoom_state["z"] + ZOOM_STEP)
-        elif key in ("-", "_"):
-            apply_zoom(zoom_state["z"] - ZOOM_STEP)
-        elif key == "0":
-            apply_zoom(1.0)
-
     top_bar = ft.Container(
         bgcolor=COLOR_SURFACE,
         border=ft.Border.only(bottom=ft.BorderSide(1, COLOR_BORDER)),
@@ -277,10 +214,6 @@ def main(page: ft.Page):
             url_text,
             ft.Container(width=10),
             copy_btn,
-            ft.Container(width=10),
-            zoom_out_btn,
-            zoom_label,
-            zoom_in_btn,
         ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
     )
 
@@ -648,18 +581,10 @@ def main(page: ft.Page):
         ], expand=True, spacing=4),
     )
 
-    # Root wrapper carries the app-wide zoom transform; top-left origin
-    # keeps the top bar pinned while content scales right/down.
-    zoom_root = ft.Container(
-        scale=ft.Scale(scale=1.0, origin=ft.Alignment.TOP_LEFT),
-        content=ft.Column([
-            top_bar,
-            ft.Row([left_panel, center_panel, right_panel], expand=True, spacing=0),
-        ], spacing=0, expand=True),
-        expand=True,
+    page.add(
+        top_bar,
+        ft.Row([left_panel, center_panel, right_panel], expand=True, spacing=0),
     )
-    page.on_keyboard_event = on_keyboard
-    page.add(zoom_root)
 
 
 if __name__ == "__main__":
