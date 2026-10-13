@@ -95,7 +95,7 @@ def start_server_background():
 def _section_header(icon, label, trailing=None):
     return ft.Row([
         ft.Icon(icon, size=14, color=COLOR_ACCENT),
-        ft.Text(label, size=10, weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
+        ft.Text(label, size=10, weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium",
                 color=COLOR_MUTED),
         ft.Container(expand=True),
         *( [trailing] if trailing is not None else [] ),
@@ -129,11 +129,15 @@ def main(page: ft.Page):
     page.spacing = 0
     page.theme_mode = ft.ThemeMode.DARK
 
-    # Self-hosted Outfit (downloaded to assets/fonts/); bold texts use the
-    # separate "Outfit Bold" family (see font_family assignments below).
+    # Self-hosted fonts (downloaded to assets/fonts/). Outfit carries prose
+    # and headings; IBM Plex Mono covers labels, timestamps, log rows, and
+    # the MCP URL — mirroring the website identity. Flet 1.0 has no weight
+    # mapping, so each weight is exposed as its own family.
     page.fonts = {
         "Outfit": "fonts/Outfit-Regular.ttf",
         "Outfit Bold": "fonts/Outfit-Bold.ttf",
+        "IBM Plex Mono": "fonts/IBMPlexMono-Regular.ttf",
+        "IBM Plex Mono Medium": "fonts/IBMPlexMono-Medium.ttf",
     }
     page.theme = ft.Theme(font_family="Outfit")
 
@@ -156,7 +160,7 @@ def main(page: ft.Page):
         content=ft.Row([
             ft.Container(width=8, height=8, bgcolor=COLOR_ONLINE),
             ft.Text("SERVER RUNNING", size=10, weight=ft.FontWeight.BOLD,
-                    font_family="Outfit Bold", color=COLOR_ONLINE),
+                    font_family="IBM Plex Mono Medium", color=COLOR_ONLINE),
         ], spacing=8)
     )
 
@@ -164,6 +168,7 @@ def main(page: ft.Page):
         value=MCP_URL,
         read_only=True,
         text_size=12,
+        text_style=ft.TextStyle(font_family="IBM Plex Mono"),
         height=38,
         width=300,
         border=ft.OutlineInputBorder(
@@ -186,7 +191,7 @@ def main(page: ft.Page):
         content=ft.Row([
             ft.Icon(ft.Icons.CONTENT_COPY, size=15, color=COLOR_BG),
             ft.Text("COPY URL", size=12, weight=ft.FontWeight.BOLD,
-                    font_family="Outfit Bold", color=COLOR_BG),
+                    font_family="IBM Plex Mono Medium", color=COLOR_BG),
         ], spacing=8),
         action=ft.CopyToClipboard(MCP_URL),
         style=ft.ButtonStyle(
@@ -244,7 +249,7 @@ def main(page: ft.Page):
                 ft.Column([
                     ft.Row([
                         ft.Text(agent["id"], weight=ft.FontWeight.BOLD,
-                                font_family="Outfit Bold", size=12,
+                                font_family="IBM Plex Mono Medium", size=12,
                                 color=COLOR_TEXT, expand=True,
                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         ft.Container(
@@ -253,7 +258,7 @@ def main(page: ft.Page):
                             content=ft.Text(
                                 agent["status"], size=9,
                                 weight=ft.FontWeight.BOLD,
-                                font_family="Outfit Bold",
+                                font_family="IBM Plex Mono Medium",
                                 color=COLOR_BG if is_on else COLOR_MUTED,
                             ),
                         ),
@@ -264,6 +269,7 @@ def main(page: ft.Page):
                         + (f" · {agent['unread_count']} unread"
                            if agent["unread_count"] else ""),
                         size=9, color=COLOR_MUTED,
+                        font_family="IBM Plex Mono",
                     ),
                 ], spacing=2, expand=True),
             ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -320,13 +326,13 @@ def main(page: ft.Page):
                 padding=10,
                 content=ft.Row([
                     ft.Text("MESH TOTAL", size=9, weight=ft.FontWeight.BOLD,
-                            font_family="Outfit Bold", color=COLOR_MUTED,
+                            font_family="IBM Plex Mono Medium", color=COLOR_MUTED,
                             expand=True),
                     ft.Text(f"+{stats['total']['lines_added']}", size=11,
-                            weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
+                            weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium",
                             color=COLOR_ADDED),
                     ft.Text(f"−{stats['total']['lines_removed']}", size=11,
-                            weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
+                            weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium",
                             color=COLOR_REMOVED),
                 ], spacing=10),
             )
@@ -351,18 +357,18 @@ def main(page: ft.Page):
                         ft.Container(width=6, height=6,
                                      bgcolor=COLOR_ONLINE if is_on else COLOR_BORDER),
                         ft.Text(a["id"], size=11, weight=ft.FontWeight.BOLD,
-                                font_family="Outfit Bold", color=COLOR_TEXT,
+                                font_family="IBM Plex Mono Medium", color=COLOR_TEXT,
                                 expand=True, max_lines=1,
                                 overflow=ft.TextOverflow.ELLIPSIS),
                     ], spacing=6),
                     ft.Row([
                         ft.Text(f"+{a['lines_added']}", size=11, color=COLOR_ADDED,
-                                weight=ft.FontWeight.BOLD, font_family="Outfit Bold"),
+                                weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium"),
                         ft.Text(f"−{a['lines_removed']}", size=11, color=COLOR_REMOVED,
-                                weight=ft.FontWeight.BOLD, font_family="Outfit Bold"),
+                                weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium"),
                         ft.Container(expand=True),
                         ft.Text(f"{a['files_changed']} file(s)", size=9,
-                                color=COLOR_MUTED),
+                                color=COLOR_MUTED, font_family="IBM Plex Mono"),
                     ], spacing=8),
                 ], spacing=4),
             ))
@@ -372,7 +378,8 @@ def main(page: ft.Page):
         "Select an agent", size=12, weight=ft.FontWeight.BOLD,
         font_family="Outfit Bold", color=COLOR_MUTED,
     )
-    chat_header_meta = ft.Text("", size=10, color=COLOR_MUTED)
+    chat_header_meta = ft.Text("", size=10, color=COLOR_MUTED,
+                               font_family="IBM Plex Mono")
     chat_column = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True, spacing=6)
 
     def _chat_row(msg):
@@ -386,9 +393,10 @@ def main(page: ft.Page):
                     ft.Icons.CAMPAIGN if msg["to"] in ("*", "all")
                     else ft.Icons.ARROW_FORWARD
                 ), size=13, color=COLOR_MUTED if is_code else COLOR_ACCENT),
-                ft.Text(msg["timestamp"], size=9, color=COLOR_MUTED, width=52),
+                ft.Text(msg["timestamp"], size=9, color=COLOR_MUTED, width=52,
+                        font_family="IBM Plex Mono"),
                 ft.Text(f"{msg['from']} → {msg['to']}", size=10,
-                        weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
+                        weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium",
                         color=COLOR_ACCENT if not is_code else COLOR_MUTED,
                         width=170, max_lines=1,
                         overflow=ft.TextOverflow.ELLIPSIS),
@@ -469,15 +477,17 @@ def main(page: ft.Page):
             content=ft.Row([
                 ft.Icon(_EVENT_ICONS.get(entry["event"], ft.Icons.CIRCLE),
                         size=12, color=color),
-                ft.Text(entry["timestamp"], size=9, color=COLOR_MUTED, width=118),
+                ft.Text(entry["timestamp"], size=9, color=COLOR_MUTED, width=118,
+                        font_family="IBM Plex Mono"),
                 ft.Text(entry["event"].upper(), size=9,
-                        weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
+                        weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium",
                         color=color, width=76),
                 ft.Column([
                     ft.Text(entry["agent"], size=10, weight=ft.FontWeight.BOLD,
-                            font_family="Outfit Bold", color=COLOR_TEXT,
+                            font_family="IBM Plex Mono Medium", color=COLOR_TEXT,
                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                    *([ft.Text(entry["detail"], size=9, color=COLOR_MUTED)]
+                    *([ft.Text(entry["detail"], size=9, color=COLOR_MUTED,
+                               font_family="IBM Plex Mono")]
                       if entry.get("detail") else []),
                 ], spacing=1, expand=True),
             ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
@@ -560,11 +570,12 @@ def main(page: ft.Page):
             ft.Row([
                 ft.Icon(ft.Icons.VISIBILITY, size=12, color=COLOR_MUTED),
                 ft.Text("READ-ONLY — agents talk over MCP; the operator "
-                        "cannot send messages", size=9, color=COLOR_MUTED),
+                        "cannot send messages", size=9, color=COLOR_MUTED,
+                        font_family="IBM Plex Mono"),
                 ft.Container(expand=True),
                 ft.Icon(ft.Icons.BOLT, size=12, color=COLOR_ACCENT),
                 ft.Text("Piggyback zero-interrupt delivery", size=9,
-                        color=COLOR_ACCENT),
+                        color=COLOR_ACCENT, font_family="IBM Plex Mono"),
             ], spacing=6),
         ], expand=True, spacing=4),
     )
