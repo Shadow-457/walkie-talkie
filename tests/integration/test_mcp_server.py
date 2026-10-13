@@ -487,6 +487,58 @@ def test_wt_list_agents_reports_unread_counts(server):
     assert by_id["a"]["status"] == "ONLINE"
 
 
+def test_initialize_alone_makes_agent_visible_in_mesh(server):
+    """A client that merely connects and handshakes (no tool calls yet) must
+    appear in the GUI's agent list and connection log immediately."""
+    base_url, hub, _mcp = server
+    req = urllib.request.Request(
+        base_url + "/mcp",
+        data=json.dumps({
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "clientInfo": {"name": "idle-cline", "version": "1.0"},
+            },
+        }).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        assert resp.status == 200
+
+    ids = {a["id"] for a in hub.get_connected_agents()}
+    assert "idle-cline" in ids
+    events = [(e["event"], e["agent"]) for e in hub.get_connection_log()]
+    assert ("connect", "idle-cline") in events
+
+
+def test_delete_session_marks_agent_offline_when_last_connection(server):
+    base_url, hub, _mcp = server
+    req = urllib.request.Request(
+        base_url + "/mcp",
+        data=json.dumps({
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {"clientInfo": {"name": "dropper", "version": "1.0"}},
+        }).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        sid = resp.headers.get("Mcp-Session-Id")
+    assert {a["id"] for a in hub.get_connected_agents()} >= {"dropper"}
+
+    delete = urllib.request.Request(
+        base_url + "/mcp", data=b"", method="DELETE",
+        headers={"Mcp-Session-Id": sid},
+    )
+    urllib.request.urlopen(delete, timeout=5).read()
+
+    by_id = {a["id"]: a for a in hub.get_connected_agents()}
+    assert by_id["dropper"]["status"] == "OFFLINE"
+    events = [e["event"] for e in hub.get_connection_log()]
+    assert "disconnect" in events
+
+
 def test_sse_stream_advertises_endpoint_with_identity(server):
     base_url, hub, _mcp = server
     blob = _sse_read_first_event(base_url, "/mcp/sse?agent_id=sse-agent")

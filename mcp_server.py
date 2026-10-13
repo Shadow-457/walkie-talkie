@@ -797,7 +797,8 @@ class MCPServer:
         payload, client_name = self._process_jsonrpc(body, identities)
 
         # Bind connection-level identity at initialize: explicit query wins,
-        # otherwise the client's own declared clientInfo.name.
+        # otherwise the client's own declared clientInfo.name. The agent
+        # becomes visible in the mesh the moment it handshakes.
         if body.get("method") == "initialize":
             bound = None
             for candidate in (request.query.get("agent_id"), client_name):
@@ -806,6 +807,8 @@ class MCPServer:
                     break
             new_sid = uuid.uuid4().hex
             self.http_sessions[new_sid] = {"agent_id": bound}
+            if bound:
+                self.hub.register_or_heartbeat(bound)
             return web.json_response(payload, headers={"Mcp-Session-Id": new_sid})
 
         if incoming_sid and client_name:
@@ -826,9 +829,21 @@ class MCPServer:
         }, status=405, headers={"Allow": "POST, DELETE"})
 
     async def handle_mcp_delete(self, request):
-        """Streamable HTTP session termination."""
+        """Streamable HTTP session termination: drop the session and mark the
+        agent offline once no connection (HTTP or SSE) still holds it."""
         sid = request.headers.get("Mcp-Session-Id") or ""
-        self.http_sessions.pop(sid, None)
+        record = self.http_sessions.pop(sid, None)
+        if record and record.get("agent_id"):
+            agent_id = record["agent_id"]
+            still_connected = any(
+                s.get("agent_id") == agent_id
+                for s in self.http_sessions.values()
+            ) or any(
+                s.get("agent_id") == agent_id
+                for s in self.sse_sessions.values()
+            )
+            if not still_connected:
+                self.hub.disconnect_agent(agent_id)
         return web.Response(status=204)
 
     # ------------------------------------------------------------------
