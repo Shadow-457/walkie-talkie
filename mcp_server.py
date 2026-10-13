@@ -26,7 +26,9 @@ Identity policy:
 import asyncio
 import json
 import logging
+import re
 import threading
+import time
 import uuid
 from collections import deque
 from datetime import datetime
@@ -99,6 +101,9 @@ class MeshHub:
         # listeners (e.g. GUI updates)
         self.on_change_callbacks: List[Callable[[], None]] = []
         self._lock = threading.RLock()
+        # Long-poll support: waiters sleep on this condition (same RLock as
+        # the hub state) and are woken whenever a message is enqueued.
+        self._condition = threading.Condition(self._lock)
 
     # -- listeners ----------------------------------------------------------
 
@@ -209,8 +214,25 @@ class MeshHub:
             if len(self.history) > HISTORY_LIMIT:
                 del self.history[: len(self.history) - HISTORY_LIMIT]
 
+            # @mention escalation: a broadcast that names an agent with
+            # @id is delivered to that agent with high priority so it
+            # sorts ahead of earlier normal traffic in its inbox.
+            mentioned = {
+                m.lower() for m in re.findall(r"@([A-Za-z0-9_.-]+)", text or "")
+            }
             for target_id in targets:
-                self._enqueue(self.agents[target_id]["inbox"], msg)
+                if recipient in ("*", "all") and target_id.lower() in mentioned \
+                        and priority != "high":
+                    delivery = Message(
+                        sender=sender, recipient=recipient, text=text,
+                        timestamp=msg.timestamp, priority="high",
+                    )
+                else:
+                    delivery = msg
+                self._enqueue(self.agents[target_id]["inbox"], delivery)
+
+            # Wake any long-poll waiters (wt_wait_for_messages).
+            self._condition.notify_all()
         self._notify()
         return True
 
@@ -227,6 +249,32 @@ class MeshHub:
             if clear:
                 record["inbox"] = []
         if clear:
+            self._notify()
+        return messages
+
+    def wait_for_messages(self, agent_id: str, timeout: float = 0.0) -> List[Dict[str, Any]]:
+        """Block until a message arrives for the agent or the timeout expires,
+        then drain and return the inbox (long-poll). Safe to call from a
+        worker thread — the MCP server runs it in an executor."""
+        if not isinstance(agent_id, str) or not agent_id.strip():
+            return []
+        agent_id = agent_id.strip()
+        self.register_or_heartbeat(agent_id)
+        deadline = time.monotonic() + max(0.0, min(float(timeout), 30.0))
+        messages: List[Dict[str, Any]] = []
+        with self._condition:
+            while True:
+                with self._lock:
+                    record = self.agents.get(agent_id)
+                    if record and record["inbox"]:
+                        messages = [m.to_dict() for m in record["inbox"]]
+                        record["inbox"] = []
+                        break
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self._condition.wait(remaining)
+        if messages:
             self._notify()
         return messages
 
@@ -419,7 +467,7 @@ class MCPServer:
     # Core JSON-RPC processor (transport-independent)
     # ------------------------------------------------------------------
 
-    def _process_jsonrpc(
+    async def _process_jsonrpc(
         self, body: Dict[str, Any], identities: Dict[str, Any]
     ) -> Tuple[Optional[Dict[str, Any]], str]:
         """Process one JSON-RPC message. Returns (payload, client_name).
@@ -479,6 +527,11 @@ class MCPServer:
 
             tool_name = params.get("name")
             args = arguments
+
+            if tool_name == "wt_wait_for_messages":
+                return await self._handle_wait_for_messages(
+                    msg_id, agent_id, args
+                ), ""
 
             if tool_name == "wt_check_inbox":
                 clear = args.get("clear", True)
@@ -574,6 +627,26 @@ class MCPServer:
                 }
             },
             {
+                "name": "wt_wait_for_messages",
+                "description": ("Block until another agent sends you a message (or the timeout expires). "
+                                "Use this when you are idle or waiting on a peer, so incoming messages wake you "
+                                "immediately instead of you polling wt_check_inbox. A broadcast that @mentions "
+                                "your ID is delivered with high priority."),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "timeout": {
+                            "type": "number",
+                            "description": "Maximum seconds to wait (0-30, default 25). Returns sooner if a message arrives."
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    }
+                }
+            },
+            {
                 "name": "wt_check_inbox",
                 "description": "Retrieve any unread messages from other agents in the Walkie-Talkie mesh.",
                 "inputSchema": {
@@ -624,6 +697,55 @@ class MCPServer:
                 }
             },
         ]
+
+    async def _handle_wait_for_messages(
+        self, msg_id, agent_id: str, args: dict
+    ) -> Dict[str, Any]:
+        """Long-poll: hold the request open until a peer message arrives or
+        the timeout expires, then return whatever is in the inbox. Runs the
+        blocking wait in a worker thread so the event loop stays free; the
+        agent's presence is refreshed while it waits."""
+        raw_timeout = args.get("timeout", 25)
+        if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, (int, float)):
+            return self._rpc_error(
+                msg_id, -32602, "'timeout' must be a number of seconds"
+            )
+        timeout = max(0.0, min(float(raw_timeout), 30.0))
+
+        loop = asyncio.get_running_loop()
+
+        def _wait():
+            deadline = time.monotonic() + timeout
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return []
+                # Refresh presence in chunks so the agent never looks stale
+                # in the GUI while parked in the long poll.
+                messages = self.hub.wait_for_messages(
+                    agent_id, timeout=min(remaining, 5.0)
+                )
+                if messages:
+                    return messages
+            return []
+
+        messages = await loop.run_in_executor(None, _wait)
+        if messages:
+            text = (
+                f"You have {len(messages)} new message(s). "
+                "Process them before continuing."
+            )
+        else:
+            text = "No new messages."
+        return {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {
+                "content": [{"type": "text", "text": text}],
+                "messages": messages,
+                "_walkie_talkie_inbox": messages,
+            }
+        }
 
     def _handle_send(self, msg_id, agent_id: str, args: dict) -> Dict[str, Any]:
         recipient = args.get("to", "*")
@@ -794,7 +916,7 @@ class MCPServer:
             "query": request.query.get("agent_id"),
             "session": session_agent,
         }
-        payload, client_name = self._process_jsonrpc(body, identities)
+        payload, client_name = await self._process_jsonrpc(body, identities)
 
         # Bind connection-level identity at initialize: explicit query wins,
         # otherwise the client's own declared clientInfo.name. The agent
@@ -941,7 +1063,7 @@ class MCPServer:
             "query": request.query.get("agent_id"),
             "session": record.get("agent_id"),
         }
-        payload, client_name = self._process_jsonrpc(body, identities)
+        payload, client_name = await self._process_jsonrpc(body, identities)
 
         # A client that declared its name at initialize (and had no explicit
         # ?agent_id) keeps that name as its connection identity.

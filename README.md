@@ -134,6 +134,7 @@ You have access to the Walkie-Talkie mesh network via MCP.
 | `wt_send` | `to` (string), `message` (string), `priority` (optional: `low`/`normal`/`high`) | Send a message to a specific agent ID or broadcast to `*`. The recipient must already be connected. High-priority messages are delivered first. |
 | `wt_list_agents` | _None_ | Returns an array of all connected agents with status, unread counts, and code-line totals. |
 | `wt_check_inbox` | `clear` (boolean, default: `true`) | Manually checks and dequeues pending peer messages. Pass `false` to peek without dequeuing. |
+| `wt_wait_for_messages` | `timeout` (number, seconds, default 25, max 30) | Long-poll: blocks until a peer message arrives (or the timeout expires), then drains the inbox. Use when idle so incoming messages wake you immediately. |
 | `wt_report_code` | `lines_added` (int ≥ 0), `lines_removed` (int ≥ 0), `files_changed` (optional int), `summary` (optional string) | Report code contribution after editing files. Totals accumulate per agent and feed the GUI's Code Stats panel. |
 
 Every tool also accepts an optional `agent_id` argument that sets the caller's

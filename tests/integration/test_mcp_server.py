@@ -171,6 +171,7 @@ def test_tools_list_exposes_four_wt_tools_with_schemas(server):
     tools = {t["name"]: t for t in data["result"]["tools"]}
     assert set(tools) == {
         "wt_send", "wt_list_agents", "wt_check_inbox", "wt_report_code",
+        "wt_wait_for_messages",
     }
 
     send_schema = tools["wt_send"]["inputSchema"]
@@ -537,6 +538,128 @@ def test_delete_session_marks_agent_offline_when_last_connection(server):
     assert by_id["dropper"]["status"] == "OFFLINE"
     events = [e["event"] for e in hub.get_connection_log()]
     assert "disconnect" in events
+
+
+# ---------------------------------------------------------------------------
+# wt_wait_for_messages — long-poll wake-up
+# ---------------------------------------------------------------------------
+
+def test_wait_for_messages_returns_immediately_when_message_pending(server):
+    base_url, hub, _mcp = server
+    for aid in ("waiter", "writer"):
+        _rpc(base_url, {
+            "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+            "params": {"name": "wt_list_agents", "arguments": {}},
+        }, agent_id=aid)
+
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_send",
+                   "arguments": {"to": "waiter", "message": "ping!"}},
+    }, agent_id="writer")
+
+    start = time.time()
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "wt_wait_for_messages", "arguments": {"timeout": 10}},
+    }, agent_id="waiter")
+    elapsed = time.time() - start
+
+    assert status == 200
+    messages = data["result"]["messages"]
+    assert [m["message"] for m in messages] == ["ping!"]
+    assert elapsed < 5, f"should return immediately, took {elapsed:.1f}s"
+
+    # Inbox was drained by the wait.
+    _status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+        "params": {"name": "wt_check_inbox", "arguments": {}},
+    }, agent_id="waiter")
+    assert data["result"]["messages"] == []
+
+
+def test_wait_for_messages_wakes_on_incoming_send(server):
+    """The point of the long poll: the waiter must be woken the moment the
+    peer sends — long before its timeout expires."""
+    import threading as threading_mod
+
+    base_url, hub, _mcp = server
+    for aid in ("sleeper", "waker"):
+        _rpc(base_url, {
+            "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+            "params": {"name": "wt_list_agents", "arguments": {}},
+        }, agent_id=aid)
+
+    def _send_later():
+        time.sleep(1.5)
+        _rpc(base_url, {
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "wt_send",
+                       "arguments": {"to": "sleeper", "message": "wake up"}},
+        }, agent_id="waker")
+
+    threading_mod.Thread(target=_send_later, daemon=True).start()
+
+    start = time.time()
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "wt_wait_for_messages", "arguments": {"timeout": 25}},
+    }, agent_id="sleeper")
+    elapsed = time.time() - start
+
+    assert status == 200
+    assert [m["message"] for m in data["result"]["messages"]] == ["wake up"]
+    assert 0.5 < elapsed < 10, f"wake took {elapsed:.1f}s"
+
+
+def test_wait_for_messages_times_out_quietly(server):
+    base_url, hub, _mcp = server
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="patient")
+
+    start = time.time()
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_wait_for_messages", "arguments": {"timeout": 1}},
+    }, agent_id="patient")
+    elapsed = time.time() - start
+
+    assert status == 200
+    assert data["result"]["messages"] == []
+    assert "No new messages" in data["result"]["content"][0]["text"]
+    assert 0.8 < elapsed < 8
+
+
+def test_wait_for_messages_rejects_bad_timeout(server):
+    base_url, _hub, _mcp = server
+    for bad in ("soon", True, [5]):
+        status, data = _rpc(base_url, {
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "wt_wait_for_messages", "arguments": {"timeout": bad}},
+        }, agent_id="timeout-prober")
+        assert status == 200
+        assert data["error"]["code"] == -32602
+
+
+def test_mentioned_broadcast_is_delivered_high_priority(server):
+    base_url, hub, _mcp = server
+    for aid in ("alice", "bob", "carol"):
+        hub.register_or_heartbeat(aid)
+
+    # Bob already has a normal message queued.
+    hub.send_message("system", "bob", "earlier normal")
+    # Alice broadcasts and @mentions bob.
+    hub.send_message("alice", "*", "@bob please review the auth patch")
+
+    inbox = hub.drain_inbox("bob")
+    assert inbox[0]["priority"] == "high"
+    assert "@bob" in inbox[0]["message"]
+
+    # Carol (not mentioned) gets the same broadcast at normal priority.
+    carol_inbox = hub.drain_inbox("carol")
+    assert carol_inbox[0]["priority"] == "normal"
 
 
 def test_sse_stream_advertises_endpoint_with_identity(server):

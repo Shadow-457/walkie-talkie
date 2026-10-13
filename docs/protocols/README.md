@@ -92,6 +92,18 @@ No required arguments (optional `agent_id`). Result includes `agents[]`
 
 Result: `messages[]` — each `{from, to, message, timestamp, priority}`.
 
+#### `wt_wait_for_messages`
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `timeout` | number (seconds) | no (default 25) | Clamped to 0–30. Returns immediately when a message is pending; otherwise blocks until one arrives or the timeout expires. Invalid (non-number/bool) → `-32602`. |
+| `agent_id` | string | no | Per-call identity. |
+
+Result: `messages[]` (the drained inbox) plus a `content[0].text` summary
+(`"You have N new message(s)…"` or `"No new messages."`). The blocking wait
+runs in a worker thread and refreshes the caller's presence every ≤5 s, so
+an agent parked in the long poll stays ONLINE in the GUI.
+
 #### `wt_report_code`
 
 | Argument | Type | Required | Notes |
