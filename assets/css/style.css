@@ -1,35 +1,42 @@
 /* ==========================================================================
    Walkie-Talkie — style.css
-   Style Decision: Brutalist / Swiss Minimalist Developer Tool (0px radius, 1px borders, instant transitions)
-   Color System: Monochrome Pure Black (#000000) & White (#ffffff)
-   Accent Technique: Single Electric Blue (#1d4ed8 / #3b82f6) used strictly for the hero punchline
-   Motion: Instant / Mechanical (--ease-brutal: linear, 0ms transitions) - strictly snappy
+   Style Decision: Swiss / Brutalist Dev Tool with Premium Eye-Comfort Color Grading
+   Light Mode: Warm Titanium / Zinc (#f4f4f5 base, #ffffff surfaces, #18181b text)
+   Dark Mode: Deep Obsidian / Charcoal (#0d0e12 base, #15161d surfaces, #e4e4e7 text)
+   Accent: Royal Electric Blue (#2563eb / #3b82f6) for hero punchline
+   Geometry: 0px sharp flat edges, instantaneous transitions
    Copyright (C) 2026 Hamza Shahbaz — GNU GPL v3.0
    ========================================================================== */
 
 :root {
-  --bg: #ffffff;
-  --bg-subtle: #f8f8f8;
-  --text: #000000;
-  --text-muted: #555555;
-  --border: #000000;
-  --border-light: #d6d6d6;
-  --accent: #1d4ed8;           /* Premium Royal/Electric Blue - strictly hero highlight */
-  --header-bg: #ffffff;
+  --bg: #f4f4f6;               /* Warm soft zinc canvas (not harsh white) */
+  --bg-subtle: #eaebee;        /* Secondary contrast layer */
+  --bg-card: #ffffff;          /* Crisp card surface */
+  --text: #18181b;             /* Soft off-black zinc (no stark #000) */
+  --text-muted: #52525b;       /* Balanced readable gray */
+  --border: #d4d4d8;           /* Clean architectural border */
+  --border-strong: #18181b;    /* High contrast edge */
+  --accent: #2563eb;           /* Electric Royal Blue highlight */
+  --header-bg: #f4f4f6;
+  --code-bg: #1e1e24;
+  --code-text: #f4f4f5;
 }
 
 [data-theme="dark"] {
-  --bg: #000000;
-  --bg-subtle: #0c0c0c;
-  --text: #ffffff;
-  --text-muted: #999999;
-  --border: #ffffff;
-  --border-light: #262626;
-  --accent: #3b82f6;           /* Premium Electric Blue (Dark mode) */
-  --header-bg: #000000;
+  --bg: #0c0d11;               /* Deep charcoal obsidian (no harsh #000 pitch black) */
+  --bg-subtle: #14151c;        /* Subtle elevated background */
+  --bg-card: #191a24;          /* Soft midnight card layer */
+  --text: #e4e4e7;             /* Softened silver white (no retina burn) */
+  --text-muted: #a1a1aa;       /* Clean muted silver */
+  --border: #27272a;           /* Gentle dark architectural line */
+  --border-strong: #3f3f46;
+  --accent: #3b82f6;           /* Electric Royal Blue (Dark mode) */
+  --header-bg: #0c0d11;
+  --code-bg: #08090c;
+  --code-text: #f4f4f5;
 }
 
-/* Reset - Hard 0 radius, zero bounce/lag */
+/* Reset - Flat, zero radius, no animations */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -48,7 +55,7 @@ body {
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
   background-color: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -73,12 +80,12 @@ a:hover {
   padding: 0 24px;
 }
 
-/* Single Specific Accent Highlighting */
+/* Hero Punchline Highlight */
 .hero-accent {
   color: var(--accent);
 }
 
-/* Nav - Asymmetric Logo-Left / Links-Right */
+/* Nav */
 nav {
   position: sticky;
   top: 0;
@@ -91,13 +98,13 @@ nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 14px 0;
 }
 
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: 0.02em;
@@ -105,8 +112,8 @@ nav {
 }
 
 .nav-logo img {
-  height: 26px;
-  width: 26px;
+  height: 28px;
+  width: 28px;
   object-fit: contain;
 }
 
@@ -123,12 +130,13 @@ nav {
 
 .nav-links a {
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
 }
 
+/* Theme Toggle Button */
 .theme-toggle {
-  background: var(--bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 6px 14px;
@@ -141,9 +149,10 @@ nav {
 .theme-toggle:hover {
   background: var(--text);
   color: var(--bg);
+  border-color: var(--text);
 }
 
-/* Flat, Non-rounded, Snappy Monochrome Buttons */
+/* Flat, Non-rounded, Snappy Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -161,13 +170,13 @@ nav {
 }
 
 .btn:hover {
-  background: var(--bg);
+  background: var(--bg-card);
   color: var(--text);
   text-decoration: none;
 }
 
 .btn-outline {
-  background: var(--bg);
+  background: var(--bg-card);
   color: var(--text);
   border: 1px solid var(--border);
 }
@@ -175,6 +184,7 @@ nav {
 .btn-outline:hover {
   background: var(--text);
   color: var(--bg);
+  border-color: var(--text);
 }
 
 .btn-sm {
@@ -182,17 +192,17 @@ nav {
   font-size: 0.75rem;
 }
 
-/* Tag / Status Block - strictly short */
+/* Status Tag */
 .status-tag {
   display: inline-block;
   font-size: 0.72rem;
   font-weight: 700;
   padding: 4px 10px;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-card);
+  color: var(--text-muted);
   border: 1px solid var(--border);
   margin-bottom: 20px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -200,6 +210,7 @@ nav {
 .hero {
   padding: 84px 0 76px;
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .hero-grid {
@@ -230,9 +241,9 @@ nav {
   flex-wrap: wrap;
 }
 
-/* Terminal / Code Window */
+/* Terminal Window */
 .terminal-window {
-  background: var(--bg);
+  background: var(--code-bg);
   border: 1px solid var(--border);
 }
 
@@ -253,7 +264,7 @@ nav {
 .dot {
   width: 8px;
   height: 8px;
-  border: 1px solid var(--text);
+  border: 1px solid var(--text-muted);
   background: var(--bg);
 }
 
@@ -265,21 +276,22 @@ nav {
 
 .terminal-body {
   padding: 20px;
-  color: var(--text);
+  color: var(--code-text);
   font-size: 0.78rem;
   line-height: 1.65;
   overflow-x: auto;
-  background: var(--bg);
+  background: var(--code-bg);
 }
 
 .terminal-body .comment {
-  color: var(--text-muted);
+  color: #71717a;
 }
 
-/* Features - Continuous Bordered Bento Grid */
+/* Features Grid */
 .features-section {
   padding: 80px 0;
   border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
 }
 
 .section-label {
@@ -306,7 +318,7 @@ nav {
 }
 
 .feature-box {
-  background: var(--bg);
+  background: var(--bg-card);
   padding: 40px 32px;
   border-right: 1px solid var(--border);
 }
@@ -344,7 +356,7 @@ nav {
 }
 
 .gui-mockup {
-  background: var(--bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
 }
 
@@ -354,7 +366,7 @@ nav {
   align-items: center;
   padding: 14px 20px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--bg-card);
 }
 
 .gui-url {
@@ -368,6 +380,7 @@ nav {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   padding: 4px 8px;
+  color: var(--text);
 }
 
 .status-indicator {
@@ -391,7 +404,7 @@ nav {
 
 .gui-sidebar {
   border-right: 1px solid var(--border);
-  background: var(--bg-subtle);
+  background: var(--bg);
   padding: 20px;
 }
 
@@ -401,7 +414,7 @@ nav {
   align-items: center;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--bg-card);
   margin-bottom: 8px;
   font-size: 0.78rem;
 }
@@ -417,7 +430,7 @@ nav {
 
 .gui-feed {
   padding: 20px;
-  background: var(--bg);
+  background: var(--bg-card);
   min-height: 260px;
 }
 
@@ -426,7 +439,7 @@ nav {
   gap: 16px;
   font-size: 0.78rem;
   padding: 10px 0;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border);
 }
 
 .feed-time {
@@ -446,6 +459,7 @@ nav {
 .how-section {
   padding: 80px 0;
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .steps-grid {
@@ -457,7 +471,7 @@ nav {
 
 .step-card {
   padding: 28px 24px;
-  background: var(--bg);
+  background: var(--bg-card);
   border-right: 1px solid var(--border);
 }
 
@@ -482,6 +496,13 @@ nav {
   font-size: 0.8rem;
   color: var(--text-muted);
   line-height: 1.7;
+}
+
+/* CTA Section */
+.cta-section {
+  padding: 80px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
 }
 
 /* Footer */
@@ -523,7 +544,7 @@ footer {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--bg);
+  background: var(--bg-card);
   border-top: 1px solid var(--border);
   padding: 14px 24px;
   display: flex;
@@ -539,7 +560,7 @@ footer {
 
 /* Modal */
 dialog {
-  background: var(--bg);
+  background: var(--bg-card);
   color: var(--text);
   border: 1px solid var(--border);
   padding: 0;
@@ -626,6 +647,7 @@ dialog::backdrop {
 .docs-main {
   padding: 48px 60px;
   min-width: 0;
+  background: var(--bg-card);
 }
 
 .docs-subtitle {
@@ -673,7 +695,7 @@ dialog::backdrop {
   padding: 24px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--bg-card);
 }
 
 .docs-card:nth-child(2n) {
@@ -712,8 +734,8 @@ dialog::backdrop {
 }
 
 pre {
-  background: var(--bg-subtle);
-  color: var(--text);
+  background: var(--code-bg);
+  color: var(--code-text);
   padding: 20px;
   overflow-x: auto;
   font-size: 0.82rem;
@@ -748,7 +770,7 @@ code {
 
 .platform-tab {
   padding: 10px 24px;
-  background: var(--bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-right: none;
   color: var(--text);
@@ -781,7 +803,7 @@ code {
   align-items: center;
   padding: 20px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--bg-card);
   margin-bottom: 12px;
 }
 
@@ -851,11 +873,4 @@ code {
     align-items: flex-start;
     gap: 14px;
   }
-}
-
-/* CTA Section Styling */
-.cta-section {
-  padding: 80px 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-subtle);
 }
