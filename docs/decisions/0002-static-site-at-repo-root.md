@@ -31,3 +31,11 @@
   URL. They contain no secrets by policy (never store any under `docs/`).
 - Contributors must know `docs/*.html` = user docs, `docs/<section>/` =
   engineering docs; `docs/README.md` explains this.
+
+---
+
+## Superseded (2026-10-13)
+
+The site now lives in `site/` (self-contained: HTML, css, js, fonts, img) and
+is deployed via `vercel.json` with `outputDirectory: "site"`. Root `assets/`
+holds only what the Flet desktop app needs. See `site/README.md`.

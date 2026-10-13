@@ -19,6 +19,7 @@ import re
 import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SITE_ROOT = os.path.join(REPO_ROOT, "site")
 
 SKIP_DIRS = {".git", "node_modules", "build", "dist", "__pycache__",
              "web-ui-design(skill)"}
@@ -31,7 +32,7 @@ EXTERNAL_RE = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|#)", re.IGNORECASE)
 
 
 def html_files():
-    for dirpath, dirnames, filenames in os.walk(REPO_ROOT):
+    for dirpath, dirnames, filenames in os.walk(SITE_ROOT):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for name in filenames:
             if name.endswith(".html"):

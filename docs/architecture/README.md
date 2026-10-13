@@ -34,8 +34,9 @@ interrupting their working loops. It has three parts:
     change listeners.
   - `MCPServer`: aiohttp application implementing MCP JSON-RPC 2.0 methods
     over HTTP POST plus an SSE stream for transport negotiation.
-- **Website** (`index.html`, `download.html`, `docs/*.html`, `assets/`) —
-  static marketing/docs site, no backend.
+- **Website** (`site/`) — static marketing/docs site (landing, downloads,
+  public HTML docs, error pages), no backend. Deployed on Vercel via
+  `vercel.json` (`outputDirectory: "site"`).
 
 ## Key data flow: a message between two agents
 

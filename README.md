@@ -76,7 +76,7 @@ python3 tools/check_site_links.py
 
 Project documentation for contributors lives in [`docs/`](docs/README.md)
 (architecture, protocols, testing, decisions). End-user documentation is the
-website under [`docs/*.html`](docs/index.html).
+website under [`site/docs/`](site/docs/index.html).
 
 ---
 
@@ -85,12 +85,14 @@ website under [`docs/*.html`](docs/index.html).
 ```text
 main.py               # Flet desktop GUI (entry point)
 mcp_server.py         # MCP JSON-RPC server + in-memory mesh hub
-assets/               # Website CSS/JS and logo
-docs/                 # User docs (HTML site) + developer docs (Markdown)
+assets/               # Fonts and images used by the desktop app
+site/                 # The public website (Vercel serves this directory)
+site/docs/            # User docs (HTML site)
+docs/                 # Developer docs (Markdown: architecture, protocols…)
 tests/                # Unit + integration tests (pytest)
 tools/                # Developer utilities (site link checker)
 agents/               # AI work reports and stable project memory
-index.html, download.html  # Landing page and downloads (with T&C modal)
+vercel.json           # Static deploy config (outputDirectory: site)
 ```
 
 ---

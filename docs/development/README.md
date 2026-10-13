@@ -69,8 +69,8 @@ variables). Export them in your shell or launcher.
 - Health check while the app runs: `curl http://127.0.0.1:8765/health`.
 - Port conflict: the GUI and server share `WT_PORT`; change it rather than
   killing processes.
-- Website: open `index.html` directly, or serve the repo root with
-  `python3 -m http.server` and browse to `/index.html`.
+- Website: `cd site && python3 -m http.server 8080` and browse to
+  `http://localhost:8080` (or open `site/index.html` directly).
 
 ## Local workflow
 

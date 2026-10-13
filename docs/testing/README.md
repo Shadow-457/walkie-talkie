@@ -44,7 +44,7 @@ client.
 4. Connect one MCP-capable client with `?agent_id=test-1`; the GUI lists it
    as ONLINE. Connect a second client; send `wt_send` between them and watch
    the log pane update within ~350 ms.
-5. Website: open `index.html`, toggle theme, click **Copy URL** in the mockup,
+5. Website: `cd site && python3 -m http.server 8080`, open `index.html`, toggle theme, click **Copy URL** in the mockup,
    open Download and confirm the T&C dialog gates each download button, and
    dismiss the cookie notice (persists via localStorage).
 
