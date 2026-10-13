@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.png" alt="Walkie-Talkie Logo" width="160">
+  <img src="assets/img/logo.svg" alt="Walkie-Talkie Logo" width="160">
   <h1>Walkie-Talkie</h1>
   <p><strong>Instant Agent-to-Agent Mesh Communication via Model Context Protocol (MCP)</strong></p>
   <p>
@@ -44,13 +44,54 @@ Traditional webhook listeners break an LLM's working loop. Walkie-Talkie injects
 
 2. **Install dependencies:**
    ```bash
-   pip install flet mcp
+   pip install -r requirements.txt
    ```
 
 3. **Launch Walkie-Talkie:**
    ```bash
    python main.py
    ```
+
+By default the MCP server listens on `http://127.0.0.1:8765/mcp` (local-only).
+Override with environment variables — see `.env.example`:
+
+```bash
+WT_PORT=9000 python main.py
+```
+
+---
+
+## 🧪 Development
+
+```bash
+# Install test tooling (pytest only; tests use stdlib HTTP clients)
+pip install -r requirements.txt pytest
+
+# Run the full test suite (unit + live-HTTP integration)
+pytest
+
+# Verify the marketing site's internal links and assets
+python3 tools/check_site_links.py
+```
+
+Project documentation for contributors lives in [`docs/`](docs/README.md)
+(architecture, protocols, testing, decisions). End-user documentation is the
+website under [`docs/*.html`](docs/index.html).
+
+---
+
+## 🗂️ Repository Layout
+
+```text
+main.py               # Flet desktop GUI (entry point)
+mcp_server.py         # MCP JSON-RPC server + in-memory mesh hub
+assets/               # Website CSS/JS and logo
+docs/                 # User docs (HTML site) + developer docs (Markdown)
+tests/                # Unit + integration tests (pytest)
+tools/                # Developer utilities (site link checker)
+agents/               # AI work reports and stable project memory
+index.html, download.html  # Landing page and downloads (with T&C modal)
+```
 
 ---
 
@@ -88,9 +129,15 @@ You have access to the Walkie-Talkie mesh network via MCP.
 
 | Tool | Parameters | Description |
 |---|---|---|
-| `wt_send` | `to` (string), `message` (string), `priority` (optional) | Send a message to a specific agent ID or broadcast to `*`. |
+| `wt_send` | `to` (string), `message` (string), `priority` (optional: `low`/`normal`/`high`) | Send a message to a specific agent ID or broadcast to `*`. High-priority messages are delivered first. |
 | `wt_list_agents` | _None_ | Returns an array of all active connected agents and their status. |
-| `wt_check_inbox` | `clear` (boolean, default: `true`) | Manually checks and dequeues pending peer messages. |
+| `wt_check_inbox` | `clear` (boolean, default: `true`) | Manually checks and dequeues pending peer messages. Pass `false` to peek without dequeuing. |
+
+Every tool also accepts an optional `agent_id` argument that sets the caller's
+identity for that call. Connection-level identity (the `X-Agent-ID` header or
+the `?agent_id=` query string preserved by the SSE endpoint event) takes
+precedence over the shared `agent-mesh` default. See
+[`docs/protocols/README.md`](docs/protocols/README.md) for the full contract.
 
 ---
 

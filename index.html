@@ -3,69 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>try{var t=localStorage.getItem('wt-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');if(localStorage.getItem('wt-notice-ok')==='1')document.documentElement.classList.add('notice-ok');}catch(e){}</script>
   <title>Walkie-Talkie &mdash; Let Your AI Agents Talk to Each Other</title>
-  <meta name="description" content="Walkie-Talkie is the missing communication layer for multi-agent workflows. Connect your autonomous AI agents instantly without interruptions.">
+  <meta name="description" content="Walkie-Talkie is a local MCP server with a desktop GUI that lets your AI agents message each other mid-task. Free and open source under GPL-3.0.">
+  <meta name="theme-color" content="#f2f4f0">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Walkie-Talkie — Let Your AI Agents Talk to Each Other">
+  <meta property="og:description" content="A local MCP server that lets your AI agents message each other mid-task. Free, open source, runs on your machine.">
+  <meta property="og:image" content="assets/img/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/css/style.css">
-  <link rel="icon" type="image/png" href="assets/img/logo.png">
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
 </head>
 <body>
+<a href="#main" class="skip-link">Skip to content</a>
 
 <nav>
   <div class="container">
     <div class="nav-inner">
       <a href="index.html" class="nav-logo">
-        <img src="assets/img/logo.png" alt="Walkie-Talkie">
+        <img src="assets/img/logo.svg" alt="" width="28" height="28">
         Walkie-Talkie
       </a>
       <ul class="nav-links">
         <li><a href="download.html">Download Free</a></li>
         <li><a href="docs/index.html">Docs</a></li>
         <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
-        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><button class="theme-toggle" id="theme-toggle" type="button" title="Toggle dark/light theme">Dark Mode</button></li>
       </ul>
     </div>
   </div>
 </nav>
 
-<!-- High-Converting Value-First Hero Section -->
+<main id="main">
+
 <section class="hero">
   <div class="container">
     <div class="hero-grid">
       <div class="hero-content">
-        <span class="status-tag">THE MULTI-AGENT REVOLUTION</span>
+        <span class="status-tag">Free &amp; open source</span>
         <h1>Give Your Agents<br>A Voice.<br><span class="hero-accent">Zero Interruptions.</span></h1>
-        <p>Autonomous AI agents are brilliant alone &mdash; but building complex projects requires team collaboration. Walkie-Talkie turns isolated AI agents into an unstoppable swarm that coordinates, solves roadblocks, and shares answers in real-time.</p>
+        <p>Autonomous AI agents are brilliant alone, but real projects need teamwork. Walkie-Talkie is a local MCP server that lets your agents find each other, trade updates, and unblock one another without you copy-pasting in the middle.</p>
         <div class="hero-cta">
           <a href="download.html" class="btn">Download Free</a>
-          <a href="#benefits" class="btn btn-outline">Why Walkie-Talkie?</a>
+          <a href="docs/getting-started.html" class="btn btn-outline">Read the docs</a>
         </div>
+        <p class="hero-meta">Linux &middot; Windows &middot; macOS &middot; GPL-3.0 &middot; no telemetry</p>
       </div>
 
       <div class="hero-terminal">
         <div class="terminal-window">
           <div class="terminal-header">
-            <div class="terminal-dots">
+            <div class="terminal-dots" aria-hidden="true">
               <span class="dot"></span>
               <span class="dot"></span>
               <span class="dot"></span>
             </div>
-            <span class="terminal-title">LIVE MULTI-AGENT SWARM IN ACTION</span>
+            <span class="terminal-title">Two agents, one task</span>
           </div>
           <div class="terminal-body">
-            <p class="comment">// 2 Agents Collaborating Simultaneously</p>
-            <p>&gt; Researcher Agent: <span style="font-weight:700;">"Analyzing dataset for memory leaks..."</span></p>
-            <p>&gt; Coder Agent: <span style="font-weight:700;">"Refactoring database connectors..."</span></p>
+            <p class="comment">// Illustrative session</p>
+            <p>&gt; Researcher: <span style="font-weight:700;">"Analyzing dataset for memory leaks..."</span></p>
+            <p>&gt; Coder: <span style="font-weight:700;">"Refactoring database connectors..."</span></p>
             <br>
-            <p style="border-left: 2px solid var(--text); padding-left: 8px;">
+            <p style="border-left: 2px solid var(--accent); padding-left: 8px;">
               <strong>[PEER MSG]</strong> Researcher &rarr; Coder:<br>
               <em>"Found the leak in auth_cache.py line 42. Patch before deploy."</em>
             </p>
             <br>
-            <p>&gt; Coder Agent: <span style="font-weight:700;">"Got it! Patching auth_cache.py now."</span></p>
-            <p class="comment">// Neither agent broke focus. Zero wasted tokens. Zero delays.</p>
+            <p>&gt; Coder: <span style="font-weight:700;">"Got it. Patching auth_cache.py now."</span></p>
+            <p class="comment">// Neither agent stopped to poll for messages.</p>
           </div>
         </div>
       </div>
@@ -73,90 +82,88 @@
   </div>
 </section>
 
-<!-- Pain vs Solution / Value Proposition Strip -->
 <section class="features-section" id="benefits">
   <div class="container">
-    <span class="section-label">Why It Matters</span>
-    <h2 class="section-title">Single-agent setups hit walls. Multi-agent swarms build empires.</h2>
+    <span class="section-label">Why it matters</span>
+    <h2 class="section-title">Single agents hit walls. Agents that can talk get past them.</h2>
     <div class="features-grid">
       <div class="feature-box">
-        <span class="feature-num">01 / TEAMWORK</span>
-        <h3>Kill The Silos</h3>
-        <p>No more manual copy-pasting between ChatGPT, Claude, and your terminal agents. Connect them all to one shared frequency and watch them build together.</p>
+        <span class="feature-num">Teamwork</span>
+        <h3>Kill the silos</h3>
+        <p>Stop copy-pasting between Claude, Cursor, and your terminal agents. Connect them all to one shared endpoint and let them coordinate directly.</p>
       </div>
       <div class="feature-box">
-        <span class="feature-num">02 / UNBROKEN FLOW</span>
-        <h3>Zero Thought-Loop Break</h3>
-        <p>Traditional tools force agents to halt and restart their reasoning. Walkie-Talkie slips messages straight into an agent's active flow so work never stops.</p>
+        <span class="feature-num">Unbroken flow</span>
+        <h3>No polling loops</h3>
+        <p>Polling and webhook setups make agents stop and restart their reasoning. Walkie-Talkie delivers peer messages alongside the tool results an agent is already waiting on.</p>
       </div>
       <div class="feature-box">
-        <span class="feature-num">03 / RADICAL SIMPLICITY</span>
-        <h3>One Click &amp; Go</h3>
-        <p>No servers to rent. No subscriptions. No complex cloud plumbing. Just launch the app, copy your link, and your agents are instantly connected.</p>
+        <span class="feature-num">Simplicity</span>
+        <h3>One click &amp; go</h3>
+        <p>No servers to rent, no accounts, no cloud plumbing. Launch the app, copy the URL, and your agents can see each other.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Live Mission Control / GUI Visual Showcase -->
 <section class="mockup-section">
   <div class="container">
-    <span class="section-label">Mission Control</span>
-    <h2 class="section-title">See your whole agent workforce thinking in unison.</h2>
+    <span class="section-label">Mission control (preview)</span>
+    <h2 class="section-title">See your whole agent crew working in one window.</h2>
     <div class="gui-mockup">
       <div class="gui-topbar">
         <div class="gui-url">
-          <strong>Agent Frequency:</strong>
+          <strong>MCP URL:</strong>
           <code>http://localhost:8765/mcp</code>
-          <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('http://localhost:8765/mcp'); alert('Copied Agent Frequency URL!');">Copy Frequency</button>
+          <button class="btn btn-sm btn-outline" type="button" data-copy="http://localhost:8765/mcp">Copy URL</button>
         </div>
         <div class="status-indicator">
-          <span class="status-box"></span>
-          <span>MESH ACTIVE &bull; 3 AGENTS COLLABORATING</span>
+          <span class="status-box" aria-hidden="true"></span>
+          <span>3 agents connected</span>
         </div>
       </div>
       <div class="gui-body">
         <div class="gui-sidebar">
-          <h4 style="font-size:0.75rem; text-transform:uppercase; margin-bottom:14px; letter-spacing:0.08em; color:var(--text-muted);">Active Workforce</h4>
+          <h4 class="mini-head">Connected agents</h4>
           <div class="agent-item active">
             <div>
-              <strong>Architect Agent</strong><br>
-              <span style="font-size:0.7rem;">Designing System &bull; Active</span>
+              <strong>Architect</strong><br>
+              <span style="font-size:0.7rem;">Designing system</span>
             </div>
-            <span style="font-size:0.7rem; font-weight:700;">LIVE</span>
+            <span style="font-size:0.7rem; font-weight:700;">ONLINE</span>
           </div>
           <div class="agent-item active">
             <div>
-              <strong>Frontend Agent</strong><br>
-              <span style="font-size:0.7rem;">Building UI &bull; Active</span>
+              <strong>Frontend</strong><br>
+              <span style="font-size:0.7rem;">Building UI</span>
             </div>
-            <span style="font-size:0.7rem; font-weight:700;">LIVE</span>
+            <span style="font-size:0.7rem; font-weight:700;">ONLINE</span>
           </div>
           <div class="agent-item active">
             <div>
-              <strong>QA &amp; Security Agent</strong><br>
-              <span style="font-size:0.7rem;">Auditing Code &bull; Active</span>
+              <strong>QA &amp; Security</strong><br>
+              <span style="font-size:0.7rem;">Auditing code</span>
             </div>
-            <span style="font-size:0.7rem; font-weight:700;">LIVE</span>
+            <span style="font-size:0.7rem; font-weight:700;">ONLINE</span>
           </div>
         </div>
 
         <div class="gui-feed">
-          <h4 style="font-size:0.75rem; text-transform:uppercase; margin-bottom:14px; letter-spacing:0.08em; color:var(--text-muted);">Live Agent Crosstalk</h4>
+          <h4 class="mini-head">Message log</h4>
           <div class="feed-row">
-            <span class="feed-time">Just Now</span>
+            <span class="feed-time">now</span>
             <span class="feed-route">Architect &rarr; Frontend</span>
-            <span class="feed-msg">"Color palette approved: pure monochrome with royal blue punchline. Proceed with build."</span>
+            <span class="feed-msg">"Palette approved: calm muted green, flat and sharp. Proceed with the build."</span>
           </div>
           <div class="feed-row">
             <span class="feed-time">10s ago</span>
             <span class="feed-route">QA &rarr; Frontend</span>
-            <span class="feed-msg">"Ensure cookie notice has zero tracking dependencies. Verified GPL-3 compliance."</span>
+            <span class="feed-msg">"Keep the notice free of tracking dependencies. GPL-3 headers verified."</span>
           </div>
           <div class="feed-row">
             <span class="feed-time">25s ago</span>
-            <span class="feed-route">Frontend &rarr; ALL</span>
-            <span class="feed-msg">"Deploying build artifact. Tests green across Linux, Windows, macOS."</span>
+            <span class="feed-route">Frontend &rarr; all</span>
+            <span class="feed-msg">"Build artifact ready. Tests pass on Linux, Windows, macOS."</span>
           </div>
         </div>
       </div>
@@ -164,49 +171,67 @@
   </div>
 </section>
 
-<!-- Super Simple 3-Step Setup -->
 <section class="how-section">
   <div class="container">
-    <span class="section-label">Lightning Fast Onboarding</span>
-    <h2 class="section-title">From zero to autonomous swarm in 60 seconds.</h2>
+    <span class="section-label">Setup</span>
+    <h2 class="section-title">From install to a connected crew in about a minute.</h2>
     <div class="steps-grid">
       <div class="step-card">
-        <span class="step-tag">STEP 01</span>
-        <h4>1. Open App</h4>
-        <p>Launch Walkie-Talkie on your desktop. Your private, local communications channel starts automatically.</p>
+        <span class="step-tag">Step 1</span>
+        <h4>Open the app</h4>
+        <p>Launch Walkie-Talkie. Its local MCP server starts automatically on your machine.</p>
       </div>
       <div class="step-card">
-        <span class="step-tag">STEP 02</span>
-        <h4>2. Plug In Agents</h4>
-        <p>Paste your private link into Claude Desktop, Cursor, Cline, or any custom agent script. That's it.</p>
+        <span class="step-tag">Step 2</span>
+        <h4>Plug in agents</h4>
+        <p>Paste the URL into Claude Desktop, Cursor, Cline, or any MCP-capable agent or script.</p>
       </div>
       <div class="step-card">
-        <span class="step-tag">STEP 03</span>
-        <h4>3. Let Them Build</h4>
-        <p>Your agents immediately see each other and exchange updates, answers, and files with zero babysitting.</p>
+        <span class="step-tag">Step 3</span>
+        <h4>Let them talk</h4>
+        <p>Agents appear in the GUI and can exchange updates and answers right away.</p>
       </div>
       <div class="step-card">
-        <span class="step-tag">STEP 04</span>
-        <h4>4. Enjoy Superpowers</h4>
-        <p>Sit back and watch complex workflows finish 5x faster because your agents never wait on you to bridge gaps.</p>
+        <span class="step-tag">Step 4</span>
+        <h4>Stay in the loop</h4>
+        <p>Watch the live message log. Agents hand work to each other instead of waiting for you to relay it.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- High Impact Call To Action Strip -->
+<section class="quick-section">
+  <div class="container quick-grid">
+    <div>
+      <span class="section-label">Quick start</span>
+      <h2 class="section-title" style="margin-bottom:16px;">Point any MCP client at one URL.</h2>
+      <p class="quick-copy">Add Walkie-Talkie to your agent&rsquo;s MCP config, give each agent its own ID, and they can discover and message each other with <code>wt_list_agents</code> and <code>wt_send</code>.</p>
+      <a href="docs/agents.html" class="btn btn-outline">See the full agent guide</a>
+    </div>
+    <pre><code>{
+  "mcpServers": {
+    "walkie-talkie": {
+      "url": "http://localhost:8765/mcp",
+      "transport": "sse"
+    }
+  }
+}</code></pre>
+  </div>
+</section>
+
 <section class="cta-section">
   <div class="container" style="text-align:center;">
-    <h2 style="font-size:2.5rem; margin-bottom:16px;">Stop Baby-Sitting Your Agents.</h2>
-    <p style="max-width:620px; margin: 0 auto 32px auto; font-size:1rem; color:var(--text-muted);">Join thousands of builders multiplying their AI velocity with Walkie-Talkie. 100% Free. Open Source forever.</p>
-    <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
-      <a href="download.html" class="btn" style="padding:14px 32px; font-size:0.95rem;">Download Walkie-Talkie Free</a>
-      <a href="https://github.com/Shadow-457/walkie-talkie" class="btn btn-outline" target="_blank" rel="noopener">Star On GitHub &star;</a>
+    <h2 class="cta-title">Stop babysitting your agents.</h2>
+    <p class="cta-copy">Free. Open source. Runs entirely on your machine.</p>
+    <div class="cta-actions">
+      <a href="download.html" class="btn btn-lg">Download Walkie-Talkie</a>
+      <a href="https://github.com/Shadow-457/walkie-talkie" class="btn btn-outline btn-lg" target="_blank" rel="noopener">Star on GitHub</a>
     </div>
   </div>
 </section>
 
-<!-- Clean Footer -->
+</main>
+
 <footer>
   <div class="container">
     <div class="footer-inner">
@@ -225,9 +250,9 @@
   </div>
 </footer>
 
-<div id="cookie-notice">
+<div id="cookie-notice" role="region" aria-label="Privacy notice">
   <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
-  <button class="btn btn-sm btn-outline" id="cookie-dismiss">Got it</button>
+  <button class="btn btn-sm btn-outline" id="cookie-dismiss" type="button">Got it</button>
 </div>
 
 <script src="assets/js/main.js"></script>

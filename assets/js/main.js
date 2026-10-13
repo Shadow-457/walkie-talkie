@@ -125,6 +125,43 @@
     });
   }
 
+  /* Copy-to-clipboard buttons (landing page mockup, docs snippets) */
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  function initCopyButtons() {
+    var buttons = document.querySelectorAll('[data-copy]');
+    if (!buttons.length) return;
+    buttons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy') || '';
+        var original = btn.textContent;
+        function done() {
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = original; }, 1500);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () {
+            fallbackCopy(text);
+            done();
+          });
+        } else {
+          fallbackCopy(text);
+          done();
+        }
+      });
+    });
+  }
+
   /* Docs Sidebar Active Link */
   function initDocsNav() {
     var links = document.querySelectorAll('.docs-sidebar a');
@@ -141,6 +178,7 @@
     initCookieNotice();
     initDownloadModal();
     initPlatformTabs();
+    initCopyButtons();
     initDocsNav();
   });
 })();
