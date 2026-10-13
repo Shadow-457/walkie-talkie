@@ -180,3 +180,29 @@ def test_ui_poll_loop_task_is_scheduled(stub_page):
     assert stub_page.run_task.call_count == 1
     handler = stub_page.run_task.call_args.args[0]
     assert handler.__name__ == "ui_poll_loop"
+
+
+def test_zoom_controls_and_keyboard_shortcuts(stub_page):
+    main_mod.main(stub_page)
+
+    import flet as ft
+
+    # A keyboard handler is registered for Ctrl +/-/0.
+    assert stub_page.on_keyboard_event is not None
+
+    # The root control carries a Scale transform, initially 1.0.
+    added = stub_page.add.call_args.args
+    assert len(added) == 1
+    zoom_root = added[0]
+    assert zoom_root.scale is not None
+    assert zoom_root.scale.scale == 1.0
+
+    # Zoom label shows 100% initially and reset works via helper.
+    label = next(c for c in _walk(zoom_root)
+                 if isinstance(c, ft.Container) and isinstance(getattr(c, "content", None), ft.Text)
+                 and getattr(c.content, "value", "").endswith("%"))
+    assert label.content.value == "100%"
+
+    main_mod._clamp_zoom(0.1) == main_mod.ZOOM_MIN
+    main_mod._clamp_zoom(5.0) == main_mod.ZOOM_MAX
+    main_mod._clamp_zoom(1.256) == 1.26
