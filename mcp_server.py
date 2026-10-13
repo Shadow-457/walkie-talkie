@@ -81,6 +81,7 @@ class Message:
             "message": self.text,
             "timestamp": self.timestamp,
             "priority": self.priority,
+            "session": self.session,
         }
 
 
@@ -252,6 +253,25 @@ class MeshHub:
             self._notify()
         return messages
 
+    def log_activity(self, agent_id: str, text: str) -> None:
+        """Record what an agent is doing right now (narration from wt_activity
+        or automatic tool-call notes). Visible in the GUI's agent tab and the
+        mesh room, but never delivered to inboxes and never wakes waiters."""
+        agent_id = agent_id.strip()
+        if not agent_id or not text:
+            return
+        self.register_or_heartbeat(agent_id)
+        with self._lock:
+            self.history.append(Message(
+                sender=agent_id,
+                recipient="*",
+                text=text[:200],
+                session="activity",
+            ))
+            if len(self.history) > HISTORY_LIMIT:
+                del self.history[: len(self.history) - HISTORY_LIMIT]
+        self._notify()
+
     def wait_for_messages(self, agent_id: str, timeout: float = 0.0) -> List[Dict[str, Any]]:
         """Block until a message arrives for the agent or the timeout expires,
         then drain and return the inbox (long-poll). Safe to call from a
@@ -348,15 +368,16 @@ class MeshHub:
             ]
 
     def get_agent_history(self, agent_id: str, limit: int = 200) -> List[Dict[str, Any]]:
-        """Every message where the agent is the sender or a recipient, plus
-        broadcasts sent by others (visible to the whole mesh) and code
-        reports addressed to it. Oldest first."""
+        """Every message where the agent is the sender or a recipient, its
+        own activity narration, plus broadcasts sent by others (visible to
+        the whole mesh) and code reports addressed to it. Oldest first."""
         with self._lock:
             rows = [
                 m for m in self.history
                 if m.sender == agent_id
                 or m.recipient == agent_id
-                or (m.recipient in ("*", "all") and m.sender != agent_id)
+                or (m.recipient in ("*", "all") and m.sender != agent_id
+                    and m.session == "chat")
             ]
             rows = rows[-limit:]
             return [m.to_dict() for m in rows]
@@ -573,6 +594,22 @@ class MCPServer:
             if tool_name == "wt_report_code":
                 return self._handle_report_code(msg_id, agent_id, args), ""
 
+            if tool_name == "wt_activity":
+                doing = args.get("doing")
+                if not isinstance(doing, str) or not doing.strip():
+                    return self._rpc_error(
+                        msg_id, -32602, "'doing' must be a non-empty string"
+                    )
+                self.hub.log_activity(agent_id, doing.strip()[:200])
+                return {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {
+                        "content": [{"type": "text",
+                                     "text": "Activity shared with the operator."}],
+                    }
+                }, ""
+
             if tool_name == "wt_send":
                 return self._handle_send(msg_id, agent_id, args), ""
 
@@ -653,14 +690,15 @@ class MCPServer:
                 "name": "wt_wait_for_messages",
                 "description": ("Block until another agent sends you a message (or the timeout expires). "
                                 "Use this when you are idle or waiting on a peer, so incoming messages wake you "
-                                "immediately instead of you polling wt_check_inbox. A broadcast that @mentions "
+                                "immediately instead of you polling wt_check_inbox. Loop on this tool to keep "
+                                "waiting — call it again immediately after each timeout. A broadcast that @mentions "
                                 "your ID is delivered with high priority."),
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "timeout": {
                             "type": "number",
-                            "description": "Maximum seconds to wait (0-30, default 25). Returns sooner if a message arrives."
+                            "description": "Maximum seconds to wait (0-55, default 50). Returns sooner if a message arrives. Loop on this tool to keep waiting."
                         },
                         "agent_id": {
                             "type": "string",
@@ -697,6 +735,24 @@ class MCPServer:
                             "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
                         }
                     }
+                }
+            },
+            {
+                "name": "wt_activity",
+                "description": "Narrate what you are doing right now so the operator can watch your work live in the Walkie-Talkie GUI (e.g. 'reading auth_cache.py', 'running the test suite', 'patching the router'). Call this whenever you switch tasks. It does not message anyone.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "doing": {
+                            "type": "string",
+                            "description": "One short line describing your current activity."
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    },
+                    "required": ["doing"]
                 }
             },
             {
@@ -745,9 +801,12 @@ class MCPServer:
             "- You do NOT receive messages automatically. Messages arrive only\n"
             "  when you call a tool.\n"
             "- Whenever you are IDLE or WAITING on a peer, call\n"
-            "  wt_wait_for_messages (timeout up to 30s). It blocks until a\n"
+            "  wt_wait_for_messages (holds for up to 55s). It blocks until a\n"
             "  peer messages you, then returns instantly with the messages.\n"
-            "  Loop on it instead of ending your turn if you expect replies.\n"
+            "  LOOP on it: after each timeout, call it again immediately —\n"
+            "  only stop when you have real work to do.\n"
+            "- Narrate your work with wt_activity ('reading X', 'running Y')\n"
+            "  so the operator can watch what you are doing live.\n"
             "- When you finish any unit of work, call wt_check_inbox to pick\n"
             "  up anything that arrived while you were busy.\n"
             "\n"
@@ -775,13 +834,24 @@ class MCPServer:
         the timeout expires, then return whatever is in the inbox. Runs the
         blocking wait in a worker thread so the event loop stays free; the
         agent's presence is refreshed while it waits."""
-        raw_timeout = args.get("timeout", 25)
+        raw_timeout = args.get("timeout", 50)
         if isinstance(raw_timeout, bool) or not isinstance(raw_timeout, (int, float)):
             return self._rpc_error(
                 msg_id, -32602, "'timeout' must be a number of seconds"
             )
-        timeout = max(0.0, min(float(raw_timeout), 30.0))
+        # Cap just below the ~60s tool-call timeout most MCP clients enforce.
+        # Ask above the cap is rejected (not clamped) so the caller learns
+        # immediately instead of hanging until its own client timeout.
+        if float(raw_timeout) > 55.0:
+            return self._rpc_error(
+                msg_id, -32602,
+                "'timeout' must be at most 55 seconds (your client likely "
+                "times tool calls out at 60s). Loop on this tool to wait "
+                "longer."
+            )
+        timeout = max(0.0, float(raw_timeout))
 
+        self.hub.log_activity(agent_id, "is waiting for peer messages")
         loop = asyncio.get_running_loop()
 
         def _wait():
@@ -806,7 +876,8 @@ class MCPServer:
                 "Process them before continuing."
             )
         else:
-            text = "No new messages."
+            text = ("No new messages yet — call wt_wait_for_messages again "
+                    "to keep waiting.")
         return {
             "jsonrpc": "2.0",
             "id": msg_id,
@@ -870,6 +941,10 @@ class MCPServer:
                 f"\n\n[WALKIE-TALKIE INCOMING PEER MSGS]:\n"
                 f"{json.dumps(piggybacked_msgs, indent=2)}"
             )
+
+        # Auto-narration: sends show up as activity in the GUI too.
+        scope = "everyone" if recipient in ("*", "all") else recipient
+        self.hub.log_activity(agent_id, f"sent a message to {scope}")
 
         return {
             "jsonrpc": "2.0",

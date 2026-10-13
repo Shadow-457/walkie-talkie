@@ -238,6 +238,14 @@ def main(page: ft.Page):
     def _agent_row(agent):
         is_on = agent["status"] == "ONLINE"
         selected = state["selected_agent"] == agent["id"]
+        # Latest activity line for this agent, shown live under its name.
+        activity = next(
+            (
+                m["message"] for m in reversed(hub.get_agent_history(agent["id"], limit=30))
+                if m.get("session") == "activity"
+            ),
+            None,
+        )
         return ft.Container(
             bgcolor=COLOR_ACCENT_SOFT if selected else (COLOR_CARD if is_on else COLOR_SURFACE),
             border=ft.Border.all(
@@ -274,6 +282,14 @@ def main(page: ft.Page):
                         size=9, color=COLOR_MUTED,
                         font_family="IBM Plex Mono",
                     ),
+                    *([ft.Text(
+                        activity,
+                        size=9,
+                        color=COLOR_ACCENT,
+                        italic=True,
+                        max_lines=1,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                    )] if activity else []),
                 ], spacing=2, expand=True),
             ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         )
@@ -455,9 +471,28 @@ def main(page: ft.Page):
 
     def _chat_row(msg, mesh_room=False):
         """One message, Cline-style: stacked bubble with a compact header
-        (direction icon, from → to, timestamp) and the body below it."""
+        (direction icon, from → to, timestamp) and the body below it.
+        Activity narration renders as a dim status line instead."""
         is_code = msg.get("message", "").startswith("code report:")
+        is_activity = msg.get("session") == "activity"
         is_broadcast = msg["to"] in ("*", "all")
+        if is_activity:
+            return ft.Container(
+                padding=ft.Padding.only(left=21, top=2, bottom=2),
+                content=ft.Row([
+                    ft.Icon(ft.Icons.RADAR, size=11, color=COLOR_BORDER),
+                    ft.Text(
+                        f"{msg['from']} {msg['message']}",
+                        size=10,
+                        color=COLOR_MUTED,
+                        italic=True,
+                        font_family="IBM Plex Mono",
+                        expand=True,
+                    ),
+                    ft.Text(msg["timestamp"], size=9, color=COLOR_BORDER,
+                            font_family="IBM Plex Mono"),
+                ], spacing=8),
+            )
         if mesh_room:
             title = f"{msg['from']} → {msg['to']}"
         else:

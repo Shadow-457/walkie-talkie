@@ -142,7 +142,8 @@ def test_health_endpoint_counts_messages(server):
     }, agent_id="health-agent")
 
     status, data = _get(base_url, "/health")
-    assert data["total_messages"] == 1
+    # 1 chat message + 1 auto-logged activity row for the send.
+    assert data["total_messages"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +172,7 @@ def test_tools_list_exposes_four_wt_tools_with_schemas(server):
     tools = {t["name"]: t for t in data["result"]["tools"]}
     assert set(tools) == {
         "wt_send", "wt_list_agents", "wt_check_inbox", "wt_report_code",
-        "wt_wait_for_messages", "wt_get_instructions",
+        "wt_wait_for_messages", "wt_get_instructions", "wt_activity",
     }
 
     send_schema = tools["wt_send"]["inputSchema"]
@@ -641,6 +642,61 @@ def test_wait_for_messages_rejects_bad_timeout(server):
         }, agent_id="timeout-prober")
         assert status == 200
         assert data["error"]["code"] == -32602
+
+
+def test_activity_narration_is_recorded_and_scoped(server):
+    """wt_activity rows land in the actor's own history and the mesh room,
+    but never wake long-pollers or arrive in inboxes."""
+    base_url, hub, _mcp = server
+    for aid in ("narrator", "listener"):
+        _rpc(base_url, {
+            "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+            "params": {"name": "wt_list_agents", "arguments": {}},
+        }, agent_id=aid)
+
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_activity",
+                   "arguments": {"doing": "reading auth_cache.py"}},
+    }, agent_id="narrator")
+    assert status == 200
+    assert "Activity shared" in data["result"]["content"][0]["text"]
+
+    # It shows in the narrator's history...
+    hist = hub.get_agent_history("narrator")
+    assert any(
+        m.get("session") == "activity" and "reading auth_cache.py" in m["message"]
+        for m in hist
+    )
+    # ...and the mesh room sees it as well.
+    mesh = hub.get_mesh_history()
+    assert any(m.get("session") == "activity" for m in mesh)
+
+    # A waiting peer must NOT be woken by activity (no inbox delivery).
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "wt_wait_for_messages", "arguments": {"timeout": 1}},
+    }, agent_id="listener")
+    _status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+        "params": {"name": "wt_check_inbox", "arguments": {}},
+    }, agent_id="listener")
+    assert data["result"]["messages"] == []
+
+
+def test_wait_rejects_timeout_above_cap(server):
+    base_url, _hub, _mcp = server
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="capper")
+    # 400s exceeds the transport cap and is rejected rather than clamped.
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_wait_for_messages", "arguments": {"timeout": 400}},
+    }, agent_id="capper")
+    assert status == 200
+    assert data["error"]["code"] == -32602
 
 
 def test_get_instructions_returns_protocol(server):
