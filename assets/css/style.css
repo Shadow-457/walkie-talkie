@@ -710,6 +710,10 @@ display: none;
 
 /* Modal */
 dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
   background: var(--bg-card);
   color: var(--text);
   border: 1px solid var(--border);
