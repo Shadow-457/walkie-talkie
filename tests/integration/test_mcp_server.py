@@ -171,7 +171,7 @@ def test_tools_list_exposes_four_wt_tools_with_schemas(server):
     tools = {t["name"]: t for t in data["result"]["tools"]}
     assert set(tools) == {
         "wt_send", "wt_list_agents", "wt_check_inbox", "wt_report_code",
-        "wt_wait_for_messages",
+        "wt_wait_for_messages", "wt_get_instructions",
     }
 
     send_schema = tools["wt_send"]["inputSchema"]
@@ -641,6 +641,19 @@ def test_wait_for_messages_rejects_bad_timeout(server):
         }, agent_id="timeout-prober")
         assert status == 200
         assert data["error"]["code"] == -32602
+
+
+def test_get_instructions_returns_protocol(server):
+    base_url, _hub, _mcp = server
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_get_instructions", "arguments": {}},
+    }, agent_id="learner")
+    assert status == 200
+    text = data["result"]["content"][0]["text"]
+    assert "wt_wait_for_messages" in text
+    assert "@" in text and "wt_report_code" in text
+    assert "'learner'" in text  # personalized with the caller's id
 
 
 def test_mentioned_broadcast_is_delivered_high_priority(server):

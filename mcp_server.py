@@ -517,7 +517,13 @@ class MCPServer:
                 },
                 "serverInfo": {
                     "name": "Walkie-Talkie Mesh",
-                    "version": "2.1.0"
+                    "version": "2.1.0",
+                    "instructions": (
+                        "Agent mesh: call wt_get_instructions once to learn "
+                        "how to receive pings (wt_wait_for_messages), send "
+                        "messages (wt_send, @mention for priority), and "
+                        "report code (wt_report_code)."
+                    ),
                 }
             }
             return {"jsonrpc": "2.0", "id": msg_id, "result": result}, client_name
@@ -534,6 +540,16 @@ class MCPServer:
 
             tool_name = params.get("name")
             args = arguments
+
+            if tool_name == "wt_get_instructions":
+                return {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {
+                        "content": [{"type": "text",
+                                     "text": self._instructions_text(agent_id)}],
+                    }
+                }, ""
 
             if tool_name == "wt_wait_for_messages":
                 return await self._handle_wait_for_messages(
@@ -671,6 +687,19 @@ class MCPServer:
                 }
             },
             {
+                "name": "wt_get_instructions",
+                "description": "Read the Walkie-Talkie mesh protocol: how to get pinged when peers message you, how to coordinate, and the message etiquette. Call this once when you connect, and follow it for the whole session.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    }
+                }
+            },
+            {
                 "name": "wt_report_code",
                 "description": "Report code changes made during this work session so the mesh tracks each agent's contribution. Call after editing files.",
                 "inputSchema": {
@@ -704,6 +733,40 @@ class MCPServer:
                 }
             },
         ]
+
+    @staticmethod
+    def _instructions_text(agent_id: str) -> str:
+        return (
+            "WALKIE-TALKIE MESH PROTOCOL (follow for this whole session)\n"
+            "\n"
+            "You are agent '" + agent_id + "' in a local agent mesh.\n"
+            "\n"
+            "HOW TO GET PINGED (important):\n"
+            "- You do NOT receive messages automatically. Messages arrive only\n"
+            "  when you call a tool.\n"
+            "- Whenever you are IDLE or WAITING on a peer, call\n"
+            "  wt_wait_for_messages (timeout up to 30s). It blocks until a\n"
+            "  peer messages you, then returns instantly with the messages.\n"
+            "  Loop on it instead of ending your turn if you expect replies.\n"
+            "- When you finish any unit of work, call wt_check_inbox to pick\n"
+            "  up anything that arrived while you were busy.\n"
+            "\n"
+            "HOW TO TALK:\n"
+            "- wt_send(to, message): send to one agent id, or '*' to broadcast.\n"
+            "- To grab a specific agent's attention in a broadcast, @mention\n"
+            "  its id, e.g. '@coder review this patch' — mentions are\n"
+            "  delivered with high priority.\n"
+            "- wt_list_agents: see who is online (+ their code stats).\n"
+            "\n"
+            "ETIQUETTE:\n"
+            "- Announce yourself with a short wt_send broadcast when you join.\n"
+            "- Share useful results proactively with whoever is working on a\n"
+            "  related task — don't make peers ask.\n"
+            "- Report file edits with wt_report_code so the operator sees\n"
+            "  everyone's +/− line contribution in the GUI.\n"
+            "- The operator watches every message in the GUI but NEVER sends.\n"
+            "  All coordination happens agent-to-agent.\n"
+        )
 
     async def _handle_wait_for_messages(
         self, msg_id, agent_id: str, args: dict
