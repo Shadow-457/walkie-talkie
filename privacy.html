@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy &mdash; Walkie-Talkie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="icon" type="image/png" href="assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="download.html">Download</a></li>
+        <li><a href="docs/index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><a href="license.html">License</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="container">
+    <h1>Privacy Policy</h1>
+    <p>Short version: we collect nothing. Here is the full version anyway.</p>
+  </div>
+</div>
+
+<main>
+  <div class="container">
+    <div class="prose-section">
+      <div class="prose">
+        <p class="meta">
+          Last updated: October 2026<br>
+          Software: Walkie-Talkie<br>
+          Copyright &copy; 2026 Hamza Shahbaz
+        </p>
+
+        <h2>Summary</h2>
+        <p>Walkie-Talkie is a desktop application and accompanying website. Neither the application nor this website collects, stores, transmits, or sells any personal data. There are no user accounts, no analytics, no advertising trackers, and no cookies.</p>
+
+        <h2>This Website</h2>
+
+        <h3>Cookies</h3>
+        <p>This website sets <strong>no cookies</strong>. The "no cookies" notice you see on first visit is dismissed by storing a single flag in your browser&apos;s <code>localStorage</code>. This data never leaves your device and is not a cookie.</p>
+
+        <h3>Analytics</h3>
+        <p>This website does not use any analytics service (Google Analytics, Plausible, Fathom, or any other). No page view, session, referrer, or device data is collected.</p>
+
+        <h3>Server Logs</h3>
+        <p>If this site is hosted on a web server, the server may produce standard access logs (IP address, timestamp, requested path). These logs are not shared with third parties and are used only for operational purposes such as diagnosing server errors.</p>
+
+        <h3>Third-party Links</h3>
+        <p>This site links to GitHub and Google Fonts. Visiting those services is subject to their respective privacy policies. Google Fonts may log font requests; if this is a concern you can self-host the fonts from the source code.</p>
+
+        <h2>The Application</h2>
+
+        <h3>Data Collected by the App</h3>
+        <p>Walkie-Talkie collects <strong>no personal data</strong>. The application does not:</p>
+        <ul>
+          <li>Transmit any data to external servers.</li>
+          <li>Create user accounts or require authentication.</li>
+          <li>Log or store message contents beyond your local session.</li>
+          <li>Access files, clipboard, or system resources beyond what is needed to run the MCP server and GUI.</li>
+        </ul>
+
+        <h3>Local MCP Server</h3>
+        <p>Walkie-Talkie runs a local MCP server on your machine. All message traffic between agents passes through this server and stays entirely on your local network. No message content is sent anywhere outside your machine or local network unless you explicitly configure the server to bind to a non-localhost address.</p>
+
+        <h3>Message Log</h3>
+        <p>The GUI displays a live message log during your session. This log is held in memory and is not written to disk unless a future version adds an explicit "save log" feature, which would be opt-in.</p>
+
+        <h2>Children</h2>
+        <p>This software is not directed at children under 13. We do not knowingly collect any information from children.</p>
+
+        <h2>Changes to This Policy</h2>
+        <p>If this policy changes materially, the updated date at the top of this page will reflect that. Given we collect no data, significant changes are unlikely.</p>
+
+        <h2>Contact</h2>
+        <p>Questions about this policy can be raised as an issue on the <a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub repository</a>.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz</span>
+        <span class="footer-license"><a href="license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="download.html">Download</a></li>
+        <li><a href="docs/index.html">Docs</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

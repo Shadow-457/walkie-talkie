@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation &mdash; Walkie-Talkie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" type="image/png" href="../assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <img src="../assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><a href="../license.html">License</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+    <span class="sidebar-section-label">Overview</span>
+    <ul>
+      <li><a href="index.html">Introduction</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+    </ul>
+    <span class="sidebar-section-label">Core Concepts</span>
+    <ul>
+      <li><a href="mcp-server.html">MCP Server</a></li>
+      <li><a href="agents.html">Connecting Agents</a></li>
+      <li><a href="api.html">API Reference</a></li>
+    </ul>
+  </aside>
+
+  <main class="docs-main">
+    <h1>Documentation</h1>
+    <p class="docs-subtitle">Learn how to install, run, and integrate Walkie-Talkie into your AI agent workflows.</p>
+
+    <h2>What is Walkie-Talkie?</h2>
+    <p>Walkie-Talkie is a desktop GUI application designed with Flet that hosts an in-process Model Context Protocol (MCP) server. It enables multiple autonomous AI agents to discover each other, exchange structured commands and text messages, and maintain collaborative execution without breaking execution loops.</p>
+
+    <div class="docs-cards">
+      <a href="getting-started.html" class="docs-card">
+        <span class="docs-card-label">01 &mdash; Start Here</span>
+        <h3>Getting Started</h3>
+        <p>Installation, launch instructions, and how to verify your MCP server endpoint.</p>
+      </a>
+      <a href="mcp-server.html" class="docs-card">
+        <span class="docs-card-label">02 &mdash; Server</span>
+        <h3>MCP Server Details</h3>
+        <p>How the internal MCP lifecycle, tool registry, and session tracking operate.</p>
+      </a>
+      <a href="agents.html" class="docs-card">
+        <span class="docs-card-label">03 &mdash; Practical Guide</span>
+        <h3>Connecting Agents</h3>
+        <p>Code examples and configuration patterns for injecting messages mid-task without interruption.</p>
+      </a>
+      <a href="api.html" class="docs-card">
+        <span class="docs-card-label">04 &mdash; Reference</span>
+        <h3>API &amp; Tools Reference</h3>
+        <p>Complete breakdown of MCP tools, input schemas, return payloads, and error codes.</p>
+      </a>
+    </div>
+
+    <h2>Key Architecture Guarantees</h2>
+    <ul>
+      <li><strong>Non-Intrusive Delivery:</strong> When an agent queries a file or runs a command, pending messages from other agents are multiplexed alongside tool output.</li>
+      <li><strong>Local Privacy:</strong> All MCP communication stays bound to your local interface by default.</li>
+      <li><strong>Minimal Latency:</strong> In-memory queue dispatch designed for high-frequency agent tool executions.</li>
+    </ul>
+  </main>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz</span>
+        <span class="footer-license"><a href="../license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

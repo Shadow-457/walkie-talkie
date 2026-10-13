@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Server &mdash; Walkie-Talkie Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" type="image/png" href="../assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <img src="../assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><a href="../license.html">License</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+    <span class="sidebar-section-label">Overview</span>
+    <ul>
+      <li><a href="index.html">Introduction</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+    </ul>
+    <span class="sidebar-section-label">Core Concepts</span>
+    <ul>
+      <li><a href="mcp-server.html">MCP Server</a></li>
+      <li><a href="agents.html">Connecting Agents</a></li>
+      <li><a href="api.html">API Reference</a></li>
+    </ul>
+  </aside>
+
+  <main class="docs-main">
+    <h1>MCP Server Architecture</h1>
+    <p class="docs-subtitle">Under the hood of Walkie-Talkie's Model Context Protocol (MCP) daemon, sessions, and synchronization.</p>
+
+    <h2>Server Lifecycle</h2>
+    <p>Walkie-Talkie runs an asynchronous HTTP + SSE server alongside the Flet desktop user interface. The lifecycle is straightforward:</p>
+    <ul>
+      <li><strong>Bind &amp; Listen:</strong> Binds to <code>127.0.0.1:8765</code> (configurable).</li>
+      <li><strong>Session Handshake:</strong> When an agent connects, it identifies itself via an initialization payload with an <code>agent_id</code> and system metadata.</li>
+      <li><strong>Heartbeat Monitoring:</strong> Ping signals verify whether an agent is active. Closed client sessions transition to <code>OFFLINE</code>.</li>
+      <li><strong>Thread-safe Queues:</strong> Each connected agent is allocated an in-memory queue for incoming messages and command prompts.</li>
+    </ul>
+
+    <h2>Zero-Interruption Delivery Model</h2>
+    <p>Traditional multi-agent systems force agents into interruptive webhook loops or dedicated listening threads that derail their reasoning process.</p>
+    <p>Walkie-Talkie uses a piggyback model:</p>
+    <div class="callout">
+      <strong>How Piggybacking Works</strong>
+      When an agent triggers any standard tool or executes <code>wt_check_inbox</code>, the Walkie-Talkie server flushes queued messages from peer agents directly into the tool output block. The LLM processes peer inputs seamlessly in context with its current task.
+    </div>
+
+    <h2>Protocol Endpoints</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th>Method</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/mcp/sse</code></td>
+          <td>GET</td>
+          <td>SSE channel for events, state updates, and agent registration.</td>
+        </tr>
+        <tr>
+          <td><code>/mcp/messages</code></td>
+          <td>POST</td>
+          <td>Standard MCP JSON-RPC payload handler for calling tools and checking state.</td>
+        </tr>
+        <tr>
+          <td><code>/health</code></td>
+          <td>GET</td>
+          <td>Health check returning active agent count and server status.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz</span>
+        <span class="footer-license"><a href="../license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walkie-Talkie &mdash; Instant Agent-to-Agent Mesh via MCP</title>
+  <meta name="description" content="Walkie-Talkie provides a snappy Flet desktop GUI hosting an in-memory MCP server. Zero interruption multi-agent messaging.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="icon" type="image/png" href="assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="download.html">Download</a></li>
+        <li><a href="docs/index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <span class="status-tag">MCP PROTOCOL &middot; FLET GUI</span>
+        <h1>Agent-to-Agent<br>Messaging.<br><span class="hero-accent">Zero Interruption.</span></h1>
+        <p>Walkie-Talkie fires up an in-memory Model Context Protocol daemon inside a snappy desktop GUI. Plug in two or more AI agents to coordinate mid-task without ever derailing their tool calls or context loops.</p>
+        <div class="hero-cta">
+          <a href="download.html" class="btn">Download App</a>
+          <a href="docs/getting-started.html" class="btn btn-outline">Read Quickstart</a>
+        </div>
+      </div>
+
+      <div class="hero-terminal">
+        <div class="terminal-window">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <span class="terminal-title">mcp-daemon :: localhost:8765</span>
+          </div>
+          <div class="terminal-body">
+            <p class="comment">// In-memory peer handshake & non-blocking delivery</p>
+            <p>&gt; walkie-talkie --bind 127.0.0.1:8765</p>
+            <p>[OK] MCP endpoint initialized: sse://localhost:8765/mcp</p>
+            <p>[AGENT] 'coder-agent' registered (session: #041)</p>
+            <p>[AGENT] 'research-agent' registered (session: #042)</p>
+            <br>
+            <p>[DISPATCH] coder &rarr; research: "Found bug in parser.py:42"</p>
+            <p class="comment">[INJECT] Attached alongside research-agent read_file result.</p>
+            <p>[STATUS] Zero context loss. Both loops synchronous.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Grid -->
+<section class="features-section">
+  <div class="container">
+    <span class="section-label">Architecture</span>
+    <h2 class="section-title">Built specifically for high-velocity multi-agent coordination.</h2>
+    <div class="features-grid">
+      <div class="feature-box">
+        <span class="feature-num">01 / DISCOVERY</span>
+        <h3>Automatic MCP Server</h3>
+        <p>Launch the desktop GUI and receive an instant local MCP URL. No background containers, cloud relays, or API tokens required.</p>
+      </div>
+      <div class="feature-box">
+        <span class="feature-num">02 / ZERO INTERRUPT</span>
+        <h3>Piggyback Delivery</h3>
+        <p>Messages from peer agents piggyback onto the recipient's active task returns. No extra polling threads or intrusive wakeups.</p>
+      </div>
+      <div class="feature-box">
+        <span class="feature-num">03 / REAL-TIME GUI</span>
+        <h3>Live Agent Observer</h3>
+        <p>Visual Flet client gives you instantaneous oversight over connected agents, active routes, queue status, and raw communication logs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GUI Mockup Section -->
+<section class="mockup-section">
+  <div class="container">
+    <span class="section-label">Desktop GUI</span>
+    <h2 class="section-title">Snappy oversight. No bloated webviews.</h2>
+    <div class="gui-mockup">
+      <div class="gui-topbar">
+        <div class="gui-url">
+          <strong>MCP Server:</strong>
+          <code>http://localhost:8765/mcp</code>
+          <button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText('http://localhost:8765/mcp'); alert('Copied MCP URL!');">Copy URL</button>
+        </div>
+        <div class="status-indicator">
+          <span class="status-box"></span>
+          <span>ONLINE (2 PEERS ACTIVE)</span>
+        </div>
+      </div>
+      <div class="gui-body">
+        <div class="gui-sidebar">
+          <h4 style="font-size:0.75rem; text-transform:uppercase; margin-bottom:14px; letter-spacing:0.08em; color:var(--text-muted);">Connected Agents</h4>
+          <div class="agent-item active">
+            <div>
+              <strong>agent-coder</strong><br>
+              <span style="font-size:0.7rem;">Active &bull; Queue: 0</span>
+            </div>
+            <span style="font-size:0.7rem; font-weight:700;">ON</span>
+          </div>
+          <div class="agent-item active">
+            <div>
+              <strong>agent-researcher</strong><br>
+              <span style="font-size:0.7rem;">Active &bull; Queue: 1</span>
+            </div>
+            <span style="font-size:0.7rem; font-weight:700;">ON</span>
+          </div>
+          <div class="agent-item" style="opacity: 0.5;">
+            <div>
+              <strong>agent-reviewer</strong><br>
+              <span style="font-size:0.7rem; color:var(--text-muted);">Idle &bull; Disconnected</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gui-feed">
+          <h4 style="font-size:0.75rem; text-transform:uppercase; margin-bottom:14px; letter-spacing:0.08em; color:var(--text-muted);">Live Message Traffic</h4>
+          <div class="feed-row">
+            <span class="feed-time">16:42:01</span>
+            <span class="feed-route">coder &rarr; researcher</span>
+            <span class="feed-msg">"Investigate test_parser_suite failures in tests/test_core.py"</span>
+          </div>
+          <div class="feed-row">
+            <span class="feed-time">16:42:05</span>
+            <span class="feed-route">researcher &rarr; coder</span>
+            <span class="feed-msg">"Found discrepancy at line 84: unexpected token EOF handling"</span>
+          </div>
+          <div class="feed-row">
+            <span class="feed-time">16:42:11</span>
+            <span class="feed-route">coder &rarr; ALL</span>
+            <span class="feed-msg">"Hotfix applied to branch fix/parser. Triggering verification."</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 Steps Walkthrough -->
+<section class="how-section">
+  <div class="container">
+    <span class="section-label">Quick Setup</span>
+    <h2 class="section-title">Up and running in seconds.</h2>
+    <div class="steps-grid">
+      <div class="step-card">
+        <span class="step-tag">01 / START</span>
+        <h4>Run the App</h4>
+        <p>Launch the desktop client. The MCP daemon spins up locally on <code>localhost:8765</code>.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-tag">02 / PLUG IN</span>
+        <h4>Configure Peers</h4>
+        <p>Add the endpoint URL to your agents' MCP tools registry.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-tag">03 / COMMUNICATE</span>
+        <h4>Dispatch Messages</h4>
+        <p>Agents trigger the built-in <code>wt_send</code> tool whenever peer coordination is required.</p>
+      </div>
+      <div class="step-card">
+        <span class="step-tag">04 / PROCEED</span>
+        <h4>No Loop Breaks</h4>
+        <p>Recipient agents receive peer messages seamlessly embedded inside their standard tool responses.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span>&copy; 2026 Hamza Shahbaz &middot; <a href="license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="download.html">Download</a></li>
+        <li><a href="docs/index.html">Docs</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm btn-outline" id="cookie-dismiss">Got it</button>
+</div>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

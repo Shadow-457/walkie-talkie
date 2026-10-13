@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download &mdash; Walkie-Talkie</title>
+  <meta name="description" content="Download Walkie-Talkie for Linux, Windows, or macOS. Free and open source under GPL-3.0.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="icon" type="image/png" href="assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="download.html">Download</a></li>
+        <li><a href="docs/index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><a href="license.html">License</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="container">
+    <h1>Download</h1>
+    <p>Walkie-Talkie is free and open source, released under the GNU GPL v3.0. Pick your platform. Binaries are published on GitHub Releases.</p>
+  </div>
+</div>
+
+<main>
+  <div class="container" style="padding-top:48px;padding-bottom:72px;">
+
+    <div class="platform-tabs">
+      <button class="platform-tab active" data-platform="linux">Linux</button>
+      <button class="platform-tab" data-platform="windows">Windows</button>
+      <button class="platform-tab" data-platform="macos">macOS</button>
+    </div>
+
+    <!-- Linux -->
+    <div id="platform-linux" class="platform-content active">
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>Walkie-Talkie.AppImage</h4>
+          <p>Universal Linux binary &mdash; x86_64. No installation required. Make executable and run.</p>
+        </div>
+        <a href="#" class="btn" data-download-url="#">Download .AppImage</a>
+      </div>
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>walkie-talkie_amd64.deb</h4>
+          <p>Debian / Ubuntu package &mdash; x86_64. Install with <code>dpkg -i</code>.</p>
+        </div>
+        <a href="#" class="btn" data-download-url="#">Download .deb</a>
+      </div>
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>Source Code</h4>
+          <p>Clone and build from source. Requires Python 3.10+ and Flet. Full instructions in the docs.</p>
+        </div>
+        <a href="https://github.com/Shadow-457/walkie-talkie" class="btn btn-outline" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+
+    <!-- Windows -->
+    <div id="platform-windows" class="platform-content">
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>WalkieTalkie-Setup.exe</h4>
+          <p>Windows installer &mdash; x64. Supports Windows 10 and Windows 11.</p>
+        </div>
+        <a href="#" class="btn" data-download-url="#">Download .exe</a>
+      </div>
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>WalkieTalkie-portable.zip</h4>
+          <p>Portable ZIP &mdash; x64. No installer, just extract and run.</p>
+        </div>
+        <a href="#" class="btn" data-download-url="#">Download .zip</a>
+      </div>
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>Source Code</h4>
+          <p>Clone and build from source. Requires Python 3.10+ and Flet.</p>
+        </div>
+        <a href="https://github.com/Shadow-457/walkie-talkie" class="btn btn-outline" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+
+    <!-- macOS -->
+    <div id="platform-macos" class="platform-content">
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>WalkieTalkie.dmg</h4>
+          <p>Universal macOS disk image &mdash; Apple Silicon + Intel. macOS 12 Monterey and later.</p>
+        </div>
+        <a href="#" class="btn" data-download-url="#">Download .dmg</a>
+      </div>
+      <div class="download-item">
+        <div class="download-meta">
+          <h4>Source Code</h4>
+          <p>Clone and build from source. Requires Python 3.10+ and Flet.</p>
+        </div>
+        <a href="https://github.com/Shadow-457/walkie-talkie" class="btn btn-outline" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+
+    <!-- Requirements -->
+    <div style="margin-top:56px;padding-top:36px;border-top:1px solid #000;">
+      <h3 style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:20px;">System Requirements</h3>
+      <table class="requirements-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Minimum</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Linux</td>
+            <td>Kernel 5.4+, x86_64</td>
+            <td>AppImage requires FUSE or libfuse2. Run <code>chmod +x</code> before executing.</td>
+          </tr>
+          <tr>
+            <td>Windows</td>
+            <td>Windows 10 x64</td>
+            <td>Windows 11 recommended. No additional runtime required.</td>
+          </tr>
+          <tr>
+            <td>macOS</td>
+            <td>macOS 12 Monterey</td>
+            <td>Universal binary for Apple Silicon and Intel. May require Gatekeeper approval on first run.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:16px;font-size:0.78rem;">Builds are published on <a href="https://github.com/Shadow-457/walkie-talkie/releases" target="_blank" rel="noopener">GitHub Releases</a>. All binaries are produced from the same GPLv3-licensed source. You can verify builds by compiling from source yourself.</p>
+    </div>
+
+  </div>
+</main>
+
+<!-- T&C Modal -->
+<dialog id="tnc-modal" aria-labelledby="tnc-title" aria-modal="true">
+  <div class="dialog-header">
+    <h2 id="tnc-title">Terms &amp; Conditions</h2>
+  </div>
+  <div class="dialog-body">
+    <p>Before downloading Walkie-Talkie, please read and accept the following terms. You can also read the <a href="terms.html">full Terms &amp; Conditions</a> page.</p>
+
+    <h3>1. License</h3>
+    <p>Walkie-Talkie is free software released under the <strong>GNU General Public License v3.0</strong>. You are free to use, study, modify, and redistribute this software under the conditions of the GPL-3.0. The full license text is at <a href="license.html">license.html</a>.</p>
+
+    <h3>2. No Warranty</h3>
+    <p>This software is provided "as is", without warranty of any kind, express or implied, including but not limited to merchantability or fitness for a particular purpose. The full disclaimer is in GPL-3.0 Sections 15&ndash;16.</p>
+
+    <h3>3. Network Exposure</h3>
+    <p>Walkie-Talkie starts a local MCP server on your machine. By default it binds to <code>localhost</code> only. You are solely responsible for any network configuration that exposes this server to other machines or the internet.</p>
+
+    <h3>4. Acceptable Use</h3>
+    <p>You agree to use Walkie-Talkie only for lawful purposes and in compliance with all applicable laws and regulations.</p>
+
+    <h3>5. Privacy</h3>
+    <p>The application collects no personal data. All message traffic remains on your local network. See the <a href="privacy.html">Privacy Policy</a>.</p>
+
+    <p style="margin-top:18px;font-weight:700;">By clicking "Accept &amp; Download" you confirm you have read these terms and agree to them.</p>
+  </div>
+  <div class="dialog-footer">
+    <button class="btn btn-outline" id="modal-cancel">Cancel</button>
+    <button class="btn" id="modal-accept">Accept &amp; Download</button>
+  </div>
+</dialog>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz</span>
+        <span class="footer-license"><a href="license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="download.html">Download</a></li>
+        <li><a href="docs/index.html">Docs</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

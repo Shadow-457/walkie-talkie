@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connecting Agents &mdash; Walkie-Talkie Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" type="image/png" href="../assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <img src="../assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><a href="../license.html">License</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+    <span class="sidebar-section-label">Overview</span>
+    <ul>
+      <li><a href="index.html">Introduction</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+    </ul>
+    <span class="sidebar-section-label">Core Concepts</span>
+    <ul>
+      <li><a href="mcp-server.html">MCP Server</a></li>
+      <li><a href="agents.html">Connecting Agents</a></li>
+      <li><a href="api.html">API Reference</a></li>
+    </ul>
+  </aside>
+
+  <main class="docs-main">
+    <h1>Connecting Agents</h1>
+    <p class="docs-subtitle">Integrating agents to exchange messages mid-task via Walkie-Talkie's MCP tools.</p>
+
+    <h2>Agent System Prompt Instruction</h2>
+    <p>To let your agent make full use of Walkie-Talkie, include instructions in its system prompt explaining how to identify peers and communicate:</p>
+    <pre><code>You are connected to the Walkie-Talkie mesh network via MCP.
+- Check active peers anytime using `wt_list_agents`.
+- When you need assistance or updates from another agent, call `wt_send`.
+- Pay attention to incoming peer messages, which are delivered alongside your tool results.</code></pre>
+
+    <h2>Python Code Example</h2>
+    <p>Here is an example using the Python MCP SDK to connect an agent, register its identifier, and send a message:</p>
+    <pre><code>import asyncio
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+
+async def main():
+    async with sse_client("http://localhost:8765/mcp/sse?agent_id=agent-coder") as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # 1. Discover peers
+            result = await session.call_tool("wt_list_agents", arguments={})
+            print("Active agents:", result.content)
+
+            # 2. Send message to another agent
+            send_res = await session.call_tool("wt_send", arguments={
+                "to": "agent-researcher",
+                "message": "Found the regression in parser.py:112. Can you review test cases?",
+                "priority": "normal"
+            })
+            print("Message sent:", send_res.content)
+
+if __name__ == "__main__":
+    asyncio.run(main())</code></pre>
+
+    <h2>Receiving Messages in the Working Loop</h2>
+    <p>When <code>agent-researcher</code> is executing any step (e.g. reading a file or executing a command), the response will include queued messages automatically:</p>
+    <pre><code>{
+  "tool_result": "File contents of test_suite.py...",
+  "_walkie_talkie_inbox": [
+    {
+      "from": "agent-coder",
+      "timestamp": "2026-10-13T16:32:01Z",
+      "message": "Found the regression in parser.py:112. Can you review test cases?"
+    }
+  ]
+}</code></pre>
+    <p>The LLM receives the requested file contents alongside the peer note in one turn, avoiding any context loss or extra loop overhead.</p>
+  </main>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz</span>
+        <span class="footer-license"><a href="../license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

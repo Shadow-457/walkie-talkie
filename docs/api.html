@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference &mdash; Walkie-Talkie Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" type="image/png" href="../assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <img src="../assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li class="theme-toggle-li"><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+    <span class="sidebar-section-label">Overview</span>
+    <ul>
+      <li><a href="index.html">Introduction</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+    </ul>
+    <span class="sidebar-section-label">Core Concepts</span>
+    <ul>
+      <li><a href="mcp-server.html">MCP Server</a></li>
+      <li><a href="agents.html">Connecting Agents</a></li>
+      <li><a href="api.html">API Reference</a></li>
+    </ul>
+  </aside>
+
+  <main class="docs-main">
+    <h1>API &amp; Tools Reference</h1>
+    <p class="docs-subtitle">All tools registered by the Walkie-Talkie MCP server.</p>
+
+    <h2>1. wt_send</h2>
+    <p>Dispatches a message or payload to an active agent ID.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Argument</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>to</code></td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>Target agent ID, or <code>"*"</code> / <code>"all"</code> to broadcast.</td>
+        </tr>
+        <tr>
+          <td><code>message</code></td>
+          <td>string</td>
+          <td>Yes</td>
+          <td>Payload, question, status report, or data fragment.</td>
+        </tr>
+        <tr>
+          <td><code>priority</code></td>
+          <td>string</td>
+          <td>No</td>
+          <td><code>"low"</code>, <code>"normal"</code>, <code>"high"</code>. Defaults to <code>"normal"</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>2. wt_list_agents</h2>
+    <p>Queries the server for all currently connected agents.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Return Key</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>agents</code></td>
+          <td>array</td>
+          <td>Array of objects containing <code>id</code>, <code>status</code>, and <code>connected_at</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. wt_check_inbox</h2>
+    <p>Manually fetches pending messages if the agent is not executing intermediate tasks.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Argument</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>clear</code></td>
+          <td>boolean</td>
+          <td>No</td>
+          <td>Default <code>true</code>. Dequeues retrieved messages.</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz &middot; <a href="../license.html">GPL-3.0</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started &mdash; Walkie-Talkie Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="icon" type="image/png" href="../assets/img/logo.png">
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <img src="../assets/img/logo.png" alt="Walkie-Talkie">
+        Walkie-Talkie
+      </a>
+      <ul class="nav-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+        <li><a href="../license.html">License</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+    <span class="sidebar-section-label">Overview</span>
+    <ul>
+      <li><a href="index.html">Introduction</a></li>
+      <li><a href="getting-started.html">Getting Started</a></li>
+    </ul>
+    <span class="sidebar-section-label">Core Concepts</span>
+    <ul>
+      <li><a href="mcp-server.html">MCP Server</a></li>
+      <li><a href="agents.html">Connecting Agents</a></li>
+      <li><a href="api.html">API Reference</a></li>
+    </ul>
+  </aside>
+
+  <main class="docs-main">
+    <h1>Getting Started</h1>
+    <p class="docs-subtitle">Set up Walkie-Talkie locally, initialize your MCP endpoint, and connect your first agent pair.</p>
+
+    <h2>1. Running Walkie-Talkie</h2>
+    <p>You can run Walkie-Talkie via binary or directly with Python using Flet.</p>
+
+    <h3>Using the Binary</h3>
+    <p>Download the AppImage, executable, or DMG from the <a href="../download.html">Download Page</a>. On Linux, grant execution permissions and run:</p>
+    <pre><code>chmod +x Walkie-Talkie.AppImage
+./Walkie-Talkie.AppImage</code></pre>
+
+    <h3>Running from Source</h3>
+    <p>Ensure Python 3.10+ is available on your machine:</p>
+    <pre><code>git clone https://github.com/Shadow-457/walkie-talkie.git
+cd walkie-talkie
+pip install -r requirements.txt
+python main.py</code></pre>
+
+    <h2>2. Grabbing your MCP URL</h2>
+    <p>Upon launch, Walkie-Talkie starts a lightweight HTTP/SSE or JSON-RPC transport listener on <code>localhost:8765/mcp</code>.</p>
+    <div class="callout">
+      <strong>Server Address</strong>
+      <code>http://localhost:8765/mcp</code>
+    </div>
+    <p>Use the <strong>[COPY]</strong> button in the top status bar of the GUI to store the URL in your clipboard.</p>
+
+    <h2>3. Configuring Your Agent</h2>
+    <p>Add the MCP configuration to your agent environment. For instance, in an agent config JSON:</p>
+    <pre><code>{
+  "mcpServers": {
+    "walkie-talkie": {
+      "url": "http://localhost:8765/mcp",
+      "transport": "sse"
+    }
+  }
+}</code></pre>
+
+    <h2>4. Observing Active Agents</h2>
+    <p>As soon as an agent completes the MCP handshake, its registered identity appears in the Walkie-Talkie GUI table with an <code>ONLINE</code> badge. If two or more agents are listed, they can begin routing messages immediately.</p>
+  </main>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-copy">Copyright &copy; 2026 Hamza Shahbaz</span>
+        <span class="footer-license"><a href="../license.html">GPL-3.0 License</a></span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="../download.html">Download</a></li>
+        <li><a href="index.html">Docs</a></li>
+        <li><a href="../terms.html">Terms</a></li>
+        <li><a href="../privacy.html">Privacy</a></li>
+        <li><a href="../license.html">License</a></li>
+        <li><a href="https://github.com/Shadow-457/walkie-talkie" target="_blank" rel="noopener">GitHub</a></li>
+        <li><button class="theme-toggle" id="theme-toggle" title="Toggle dark/light theme">Dark Mode</button></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div id="cookie-notice">
+  <p>This site uses <strong>no cookies</strong> and collects no personal data whatsoever.</p>
+  <button class="btn btn-sm" id="cookie-dismiss">OK</button>
+</div>
+
+<script src="../assets/js/main.js"></script>
+</body>
+</html>
