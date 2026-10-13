@@ -156,6 +156,70 @@ def test_clicking_agent_row_loads_its_chat(stub_page):
     assert "chat-agent" in texts, "connected agent id must appear in the list"
 
 
+def test_mesh_room_tab_is_default_and_lists_all_traffic(stub_page):
+    main_mod.main(stub_page)
+    main_mod.hub.register_or_heartbeat("a")
+    main_mod.hub.register_or_heartbeat("b")
+    main_mod.hub.send_message("a", "b", "direct hello")
+    main_mod.hub.report_code("b", lines_added=5, lines_removed=1)
+    main_mod._ui_refresh()
+
+    import flet as ft
+    controls = _collect_added(stub_page)
+    texts = [c.value for c in controls if isinstance(c, ft.Text)]
+    # MESH tab exists by default and the room shows both traffic kinds.
+    assert "MESH" in texts
+    assert "MESH ROOM" in texts
+    assert "direct hello" in texts
+    assert any(t.startswith("code report:") for t in texts)
+
+
+def test_agent_tabs_render_for_each_connected_agent(stub_page):
+    main_mod.main(stub_page)
+    for aid in ("alpha", "beta"):
+        main_mod.hub.register_or_heartbeat(aid)
+    main_mod._ui_refresh()
+
+    import flet as ft
+    controls = _collect_added(stub_page)
+    texts = [c.value for c in controls if isinstance(c, ft.Text)]
+    assert "alpha" in texts and "beta" in texts  # tab labels + list rows
+
+
+def test_chat_rows_are_stacked_bubbles_with_header(stub_page):
+    """Cline-style: message body sits under a compact header, not a table row."""
+    main_mod.main(stub_page)
+    main_mod.hub.register_or_heartbeat("a")
+    main_mod.hub.register_or_heartbeat("b")
+    main_mod.hub.send_message("a", "b", "bubble body")
+    main_mod._ui_refresh()
+
+    import flet as ft
+    controls = _collect_added(stub_page)
+    body = next(c for c in controls if isinstance(c, ft.Text)
+                and c.value == "bubble body")
+    # The body is selectable (chat-style) and inside a Column (bubble),
+    # not a Row (old table layout).
+    assert body.selectable
+
+    # Structural check: the bubble container holds a Column whose subtree
+    # contains the body text (nested under the margin wrapper).
+    def _has_body(control):
+        if isinstance(control, ft.Text) and control.value == "bubble body":
+            return True
+        content = getattr(control, "content", None)
+        if content is not None and _has_body(content):
+            return True
+        children = getattr(control, "controls", None)
+        if isinstance(children, (list, tuple)):
+            return any(_has_body(ch) for ch in children)
+        return False
+
+    bubbles = [c for c in controls if isinstance(c, ft.Container)
+               and isinstance(c.content, ft.Column) and _has_body(c.content)]
+    assert bubbles, "message body must live in a stacked bubble Column"
+
+
 def test_gui_uses_icons(stub_page):
     main_mod.main(stub_page)
 

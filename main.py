@@ -146,7 +146,8 @@ def main(page: ft.Page):
 
     # ------------------------------------------------------------------ state
     state = {
-        "selected_agent": None,      # agent id shown in the center chat panel
+        "selected_agent": None,      # agent id highlighted in the left list
+        "tab": None,                 # active chat tab: None = MESH room
         "agents_fp": None,           # fingerprint of last rendered agent list
         "chat_fp": None,             # fingerprint of last rendered chat
         "log_fp": None,              # fingerprint of last rendered connection log
@@ -228,9 +229,11 @@ def main(page: ft.Page):
     code_stats_column = ft.Column(spacing=6)
 
     def select_agent(agent_id):
+        # Clicking an agent in the left list opens its chat tab.
         state["selected_agent"] = agent_id
+        state["tab"] = agent_id
         state["chat_fp"] = None  # force chat re-render
-        render_chat()
+        render_agents()
 
     def _agent_row(agent):
         is_on = agent["status"] == "ONLINE"
@@ -307,7 +310,70 @@ def main(page: ft.Page):
                 agents_column.controls.append(_agent_row(agent))
 
         render_code_stats(agents_data)
+        sync_tabs(agents_data)
+        render_chat()
         page.update()
+
+    # ---- center chat tabs -------------------------------------------------
+    chat_tabs_host = ft.Container(content=None)
+
+    def _tab_chip(label, index, online=None):
+        """One flat tab: underline for active, status dot for agents."""
+        active = (index == 0 and state["tab"] is None) or \
+                 (state["tab"] == label)
+        return ft.Container(
+            ink=True,
+            on_click=lambda e, i=index: _select_tab(i),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+            border=ft.Border.only(
+                bottom=ft.BorderSide(2, COLOR_ACCENT if active else "#00000000")
+            ),
+            bgcolor=COLOR_ACCENT_SOFT if active else None,
+            content=ft.Row([
+                ft.Text(
+                    label,
+                    size=11,
+                    weight=ft.FontWeight.BOLD if active else ft.FontWeight.NORMAL,
+                    font_family=("IBM Plex Mono Medium" if label == "MESH"
+                                 else ("IBM Plex Mono Medium" if active else "Outfit")),
+                    color=COLOR_TEXT if active else COLOR_MUTED,
+                ),
+                *([ft.Container(width=6)] if online is not None else []),
+                *([ft.Container(
+                    width=6, height=6,
+                    bgcolor=COLOR_ONLINE if online else COLOR_BORDER,
+                )] if online is not None else []),
+            ], spacing=0),
+        )
+
+    def _select_tab(index):
+        agents_data = hub.get_connected_agents()
+        if index <= 0:
+            state["tab"] = None
+            state["selected_agent"] = None
+        elif 1 <= index <= len(agents_data):
+            state["tab"] = agents_data[index - 1]["id"]
+            state["selected_agent"] = state["tab"]
+        state["chat_fp"] = None
+        render_agents()  # re-renders list highlight + tab bar + chat
+
+    def sync_tabs(agents_data):
+        """Rebuild the flat tab bar: MESH + one chip per known agent."""
+        if state["tab"] is not None and state["tab"] not in {
+                a["id"] for a in agents_data}:
+            # Active agent vanished — fall back to the mesh room.
+            state["tab"] = None
+            state["selected_agent"] = None
+            state["chat_fp"] = None
+        chips = [_tab_chip("MESH", 0)]
+        for i, agent in enumerate(agents_data, start=1):
+            chips.append(_tab_chip(
+                agent["id"], i,
+                online=(agent["status"] == "ONLINE"),
+            ))
+        chat_tabs_host.content = ft.Row(
+            chips, spacing=2, scroll=ft.ScrollMode.AUTO,
+        )
 
     def render_code_stats(agents_data):
         stats = hub.get_code_stats()
@@ -373,56 +439,94 @@ def main(page: ft.Page):
                 ], spacing=4),
             ))
 
-    # ------------------------------------------------------ center: agent chat
+    # ------------------------------------------------------ center: chat tabs
+    # Tabbed chat area: a MESH ROOM tab with all traffic, plus one tab per
+    # connected agent showing its conversation, Cline-style.
     chat_header_name = ft.Text(
-        "Select an agent", size=12, weight=ft.FontWeight.BOLD,
+        "", size=12, weight=ft.FontWeight.BOLD,
         font_family="Outfit Bold", color=COLOR_MUTED,
     )
     chat_header_meta = ft.Text("", size=10, color=COLOR_MUTED,
                                font_family="IBM Plex Mono")
     chat_column = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True, spacing=6)
 
-    def _chat_row(msg):
+    def _chat_row(msg, mesh_room=False):
+        """One message, Cline-style: stacked bubble with a compact header
+        (direction icon, from → to, timestamp) and the body below it."""
         is_code = msg.get("message", "").startswith("code report:")
+        is_broadcast = msg["to"] in ("*", "all")
+        if mesh_room:
+            title = f"{msg['from']} → {msg['to']}"
+        else:
+            peer = msg['from'] if msg['from'] != state['tab'] else msg['to']
+            title = ("↳ broadcast heard" if is_broadcast and msg['from'] != state['tab']
+                     else f"{msg['from']} → {msg['to']}")
+        accent = COLOR_MUTED if is_code else COLOR_ACCENT
         return ft.Container(
             bgcolor=COLOR_SURFACE,
             border=ft.Border.all(1, COLOR_BORDER),
             padding=10,
-            content=ft.Row([
-                ft.Icon(ft.Icons.CODE if is_code else (
-                    ft.Icons.CAMPAIGN if msg["to"] in ("*", "all")
-                    else ft.Icons.ARROW_FORWARD
-                ), size=13, color=COLOR_MUTED if is_code else COLOR_ACCENT),
-                ft.Text(msg["timestamp"], size=9, color=COLOR_MUTED, width=52,
-                        font_family="IBM Plex Mono"),
-                ft.Text(f"{msg['from']} → {msg['to']}", size=10,
-                        weight=ft.FontWeight.BOLD, font_family="IBM Plex Mono Medium",
-                        color=COLOR_ACCENT if not is_code else COLOR_MUTED,
-                        width=170, max_lines=1,
-                        overflow=ft.TextOverflow.ELLIPSIS),
-                ft.Text(msg["message"], size=11,
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(
+                        ft.Icons.CODE if is_code else (
+                            ft.Icons.CAMPAIGN if is_broadcast else ft.Icons.ARROW_FORWARD
+                        ),
+                        size=13, color=accent,
+                    ),
+                    ft.Text(title, size=10, weight=ft.FontWeight.BOLD,
+                            font_family="IBM Plex Mono Medium", color=accent,
+                            expand=True, max_lines=1,
+                            overflow=ft.TextOverflow.ELLIPSIS),
+                    ft.Text(msg["timestamp"], size=9, color=COLOR_MUTED,
+                            font_family="IBM Plex Mono"),
+                ], spacing=8),
+                ft.Container(
+                    margin=ft.Margin.only(left=21),
+                    content=ft.Text(
+                        msg["message"], size=11,
                         color=COLOR_MUTED if is_code else COLOR_TEXT,
-                        expand=True, selectable=True),
-            ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                        expand=True, selectable=True,
+                    ),
+                ),
+            ], spacing=4),
         )
 
     def render_chat():
-        agent_id = state["selected_agent"]
-        if agent_id is None:
-            chat_header_name.value = "Select an agent"
-            chat_header_name.color = COLOR_MUTED
-            chat_header_meta.value = ""
+        tab_id = state["tab"]
+
+        if tab_id is None:
+            # ---- MESH ROOM: everything, chronological ----
+            history = hub.get_mesh_history()
+            fp = tuple(
+                (m["timestamp"], m["from"], m["to"], m["message"])
+                for m in history
+            )
+            if fp == state["chat_fp"]:
+                return
+            state["chat_fp"] = fp
+
+            chat_header_name.value = "MESH ROOM"
+            chat_header_name.color = COLOR_TEXT
+            chat_header_meta.value = (
+                f"{len(history)} message(s) — every agent, one room"
+            )
             chat_column.controls.clear()
-            chat_column.controls.append(_empty_state(
-                ft.Icons.FORUM,
-                "Click an agent on the left to read its conversation",
-                "Every message the agent sends, receives, or hears as a "
-                "broadcast shows up here.",
-            ))
+            if not history:
+                chat_column.controls.append(_empty_state(
+                    ft.Icons.FORUM,
+                    "The room is quiet",
+                    "Messages between agents appear here in real time, "
+                    "with code reports from wt_report_code.",
+                ))
+            else:
+                for m in history:
+                    chat_column.controls.append(_chat_row(m, mesh_room=True))
             page.update()
             return
 
-        history = hub.get_agent_history(agent_id)
+        # ---- single agent tab: its full conversation ----
+        history = hub.get_agent_history(tab_id)
         fp = tuple(
             (m["timestamp"], m["from"], m["to"], m["message"]) for m in history
         )
@@ -431,9 +535,9 @@ def main(page: ft.Page):
         state["chat_fp"] = fp
 
         agent = next(
-            (a for a in hub.get_connected_agents() if a["id"] == agent_id), None
+            (a for a in hub.get_connected_agents() if a["id"] == tab_id), None
         )
-        chat_header_name.value = agent_id
+        chat_header_name.value = tab_id
         chat_header_name.color = COLOR_TEXT
         if agent:
             chat_header_meta.value = (
@@ -441,11 +545,13 @@ def main(page: ft.Page):
                 f"last seen {agent['last_seen']} · "
                 f"+{agent['lines_added']} −{agent['lines_removed']} lines"
             )
+        else:
+            chat_header_meta.value = "agent left the mesh"
         chat_column.controls.clear()
         if not history:
             chat_column.controls.append(_empty_state(
                 ft.Icons.FORUM,
-                f"No messages involving {agent_id} yet",
+                f"No messages involving {tab_id} yet",
             ))
         else:
             for m in history:
@@ -564,7 +670,8 @@ def main(page: ft.Page):
                 ft.Container(expand=True),
                 chat_header_meta,
             ], spacing=8),
-            ft.Divider(height=8, color=COLOR_BORDER),
+            ft.Container(height=2),
+            chat_tabs_host,
             chat_column,
             ft.Divider(height=8, color=COLOR_BORDER),
             ft.Row([

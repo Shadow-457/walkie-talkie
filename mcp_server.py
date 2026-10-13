@@ -361,6 +361,13 @@ class MeshHub:
             rows = rows[-limit:]
             return [m.to_dict() for m in rows]
 
+    def get_mesh_history(self, limit: int = 300) -> List[Dict[str, Any]]:
+        """The whole room: every chat message and code report in
+        chronological order (oldest first) — powers the MESH tab."""
+        with self._lock:
+            rows = self.history[-limit:]
+            return [m.to_dict() for m in rows]
+
 
 class MCPServer:
     """aiohttp server implementing MCP JSON-RPC 2.0 over Streamable HTTP
