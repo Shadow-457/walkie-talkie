@@ -6,24 +6,32 @@ Provides:
 - In-memory agent registry and presence tracking
 - Non-blocking priority inbox per agent
 - Piggybacked inbox attachment for responses (zero-interruption delivery)
-- Native MCP JSON-RPC 2.0 endpoints over HTTP/SSE
+- MCP JSON-RPC 2.0 over two transports:
+    * Streamable HTTP: POST /mcp (JSON responses, Mcp-Session-Id sessions)
+    * Classic SSE:     GET /mcp/sse (endpoint event) + POST /mcp/messages
+      (202 accepted; JSON-RPC responses delivered as `event: message`
+      frames on the SSE stream — the wire behaviour real MCP clients,
+      e.g. Cline / Claude Desktop in SSE mode, expect)
 - Per-agent message history, connection log, and code-line statistics
 
 Identity policy:
-- An agent is EXACTLY the ID it presents (X-Agent-ID header, ?agent_id=
-  query, or per-call agent_id argument). The server never invents, merges,
-  renames, or assigns identities/roles to clients. Calls without any
-  identity are rejected with a JSON-RPC error.
+- An agent is EXACTLY the ID it presents: X-Agent-ID header, ?agent_id=
+  query, per-call agent_id argument, or the clientInfo.name its client
+  declared during `initialize` (bound to the connection session).
+- The server never invents, merges, renames, or assigns identities/roles.
+  Mesh actions (tools/call) without any identity are rejected with
+  error -32000.
 """
 
 import asyncio
 import json
 import logging
 import threading
+import uuid
 from collections import deque
 from datetime import datetime
-from typing import Any, Callable, Deque, Dict, List, Optional
-from urllib.parse import urlencode
+from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
+from urllib.parse import quote, urlencode
 
 from aiohttp import web
 
@@ -34,6 +42,8 @@ PRIORITY_RANK = {"high": 0, "normal": 1, "low": 2}
 
 HISTORY_LIMIT = 2000   # global mesh message ring
 LOG_LIMIT = 500        # connection-event ring
+
+DEFAULT_PROTOCOL_VERSION = "2024-11-05"
 
 
 def _now() -> str:
@@ -305,9 +315,10 @@ class MeshHub:
 
 
 class MCPServer:
-    """Lightweight aiohttp server implementing MCP JSON-RPC 2.0 endpoints."""
+    """aiohttp server implementing MCP JSON-RPC 2.0 over Streamable HTTP
+    and classic SSE transports."""
 
-    IDENTITY_ERROR_CODE = -32001
+    IDENTITY_ERROR_CODE = -32000
 
     def __init__(self, hub: MeshHub, host: str = "127.0.0.1", port: int = 8765):
         self.hub = hub
@@ -321,21 +332,39 @@ class MCPServer:
         # free one — used by tests).
         self.bound_port: int = port
 
+        # Classic SSE transport sessions:
+        #   session_id -> {"queue": asyncio.Queue, "agent_id": str | None}
+        # JSON-RPC responses for POSTs to /mcp/messages are pushed onto the
+        # queue and written to the SSE stream by handle_sse.
+        self.sse_sessions: Dict[str, Dict[str, Any]] = {}
+        # Streamable HTTP sessions: session_id -> {"agent_id": str | None}
+        self.http_sessions: Dict[str, Dict[str, Any]] = {}
+
         self._setup_routes()
 
     def _setup_routes(self):
         self.app.router.add_get("/", self.handle_root)
         self.app.router.add_get("/health", self.handle_health)
+        # Streamable HTTP transport
         self.app.router.add_post("/mcp", self.handle_mcp)
-        self.app.router.add_post("/mcp/messages", self.handle_mcp)
+        self.app.router.add_get("/mcp", self.handle_mcp_get)
+        self.app.router.add_delete("/mcp", self.handle_mcp_delete)
+        # Classic SSE transport
         self.app.router.add_get("/mcp/sse", self.handle_sse)
+        self.app.router.add_post("/mcp/messages", self.handle_mcp_messages)
+
+    # ------------------------------------------------------------------
+    # Metadata endpoints
+    # ------------------------------------------------------------------
 
     async def handle_root(self, request):
         return web.json_response({
             "name": "Walkie-Talkie MCP Server",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "status": "RUNNING",
             "mcp_endpoint": f"http://{self.host}:{self.bound_port}/mcp",
+            "sse_endpoint": f"http://{self.host}:{self.bound_port}/mcp/sse",
+            "transports": ["streamable-http", "sse"],
             "copyright": "Copyright (C) 2026 Hamza Shahbaz — GPL-3.0"
         })
 
@@ -348,98 +377,58 @@ class MCPServer:
             "total_messages": len(self.hub.history)
         })
 
-    async def handle_sse(self, request):
-        # Identity is carried on the SSE URL (?agent_id=...) and echoed back
-        # in the endpoint event so every subsequent POST keeps it. Without an
-        # explicit id, presence is only tracked from actual tool calls.
-        agent_id = (request.query.get("agent_id") or "").strip()
-        if agent_id:
-            self.hub.register_or_heartbeat(agent_id)
-
-        response = web.StreamResponse(
-            status=200,
-            reason='OK',
-            headers={
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            }
-        )
-        await response.prepare(request)
-        endpoint = "/mcp"
-        if agent_id:
-            endpoint = "/mcp?" + urlencode({"agent_id": agent_id})
-        await response.write(f"event: endpoint\ndata: {endpoint}\n\n".encode())
-
-        try:
-            while True:
-                await asyncio.sleep(5)
-                if agent_id:
-                    self.hub.register_or_heartbeat(agent_id)
-                # Keep-alive heartbeat
-                await response.write(b": keepalive\n\n")
-        except (asyncio.CancelledError, ConnectionResetError):
-            if agent_id:
-                self.hub.disconnect_agent(agent_id)
-        return response
-
-    # -- identity -------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Identity
+    # ------------------------------------------------------------------
 
     @staticmethod
-    def _resolve_agent_id(request, params: dict, arguments: dict) -> str:
-        """Identity precedence: header > params > per-call argument > query.
-
-        Returns "" when the client presents no identity at all — the server
-        never guesses or invents one.
-        """
+    def _resolve_agent_id(identities: Dict[str, Any]) -> str:
+        """Identity precedence: header > params > per-call argument > query >
+        connection-session binding (query or clientInfo.name bound at
+        initialize). Returns "" when the client presents no identity at all —
+        the server never guesses or invents one."""
         for candidate in (
-            request.headers.get("X-Agent-ID"),
-            params.get("agent_id"),
-            arguments.get("agent_id"),
-            request.query.get("agent_id"),
+            identities.get("header"),
+            identities.get("params"),
+            identities.get("args"),
+            identities.get("query"),
+            identities.get("session"),
         ):
             if isinstance(candidate, str) and candidate.strip():
                 return candidate.strip()
-            if isinstance(candidate, (int, float)):
+            if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
                 return str(candidate)
         return ""
 
-    def _identity_error(self, msg_id) -> web.Response:
-        return web.json_response({
+    def _identity_error(self, msg_id) -> Dict[str, Any]:
+        return {
             "jsonrpc": "2.0",
             "id": msg_id,
             "error": {
                 "code": self.IDENTITY_ERROR_CODE,
                 "message": (
                     "Unidentified agent: pass your agent identity via the "
-                    "X-Agent-ID header, a ?agent_id= query parameter, or an "
-                    "agent_id tool argument. Walkie-Talkie does not assign "
-                    "identities or roles automatically."
+                    "X-Agent-ID header, a ?agent_id= query parameter on the "
+                    "server URL, or an agent_id tool argument. Walkie-Talkie "
+                    "does not assign identities or roles automatically."
                 ),
             },
-        })
+        }
 
-    # -- MCP processor ----------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Core JSON-RPC processor (transport-independent)
+    # ------------------------------------------------------------------
 
-    async def handle_mcp(self, request):
-        """MCP JSON-RPC 2.0 processor."""
-        try:
-            body = await request.json()
-        except Exception:
-            return web.json_response({
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {"code": -32700, "message": "Parse error"}
-            }, status=400)
+    def _process_jsonrpc(
+        self, body: Dict[str, Any], identities: Dict[str, Any]
+    ) -> Tuple[Optional[Dict[str, Any]], str]:
+        """Process one JSON-RPC message. Returns (payload, client_name).
 
-        msg_id = body.get("id") if isinstance(body, dict) else None
-        if not isinstance(body, dict):
-            return web.json_response({
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {"code": -32600, "message": "Invalid Request"}
-            }, status=400)
-
+        payload is None for notifications (no response is sent).
+        client_name is the clientInfo.name from `initialize` ("" otherwise);
+        transports use it to bind a connection-level identity.
+        """
+        msg_id = body.get("id")
         method = body.get("method")
         params = body.get("params", {})
         if not isinstance(params, dict):
@@ -448,151 +437,68 @@ class MCPServer:
         if not isinstance(arguments, dict):
             arguments = {}
 
-        # JSON-RPC notifications never receive a response (204 = accepted).
+        # JSON-RPC notifications never receive a response.
         if isinstance(method, str) and method.startswith("notifications/"):
-            return web.Response(status=204)
+            return None, ""
 
-        # Protocol-level methods (initialize / tools/list) stay open so any
-        # MCP client can complete its handshake; identity is enforced on the
-        # mesh actions themselves (tools/call).
-        if method == "tools/call":
-            agent_id = self._resolve_agent_id(request, params, arguments)
-            if not agent_id:
-                return self._identity_error(msg_id)
-            self.hub.register_or_heartbeat(agent_id)
+        if method == "ping":
+            return {"jsonrpc": "2.0", "id": msg_id, "result": {}}, ""
 
-        # Handle MCP Methods
         if method == "initialize":
+            requested = params.get("protocolVersion")
+            version = (
+                requested
+                if isinstance(requested, str) and requested.strip()
+                else DEFAULT_PROTOCOL_VERSION
+            )
+            client_name = ""
+            client_info = params.get("clientInfo")
+            if isinstance(client_info, dict) and isinstance(client_info.get("name"), str):
+                client_name = client_info["name"].strip()
             result = {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": version,
                 "capabilities": {
                     "tools": {"listChanged": True}
                 },
                 "serverInfo": {
                     "name": "Walkie-Talkie Mesh",
-                    "version": "2.0.0"
+                    "version": "2.1.0"
                 }
             }
-            return web.json_response({"jsonrpc": "2.0", "id": msg_id, "result": result})
+            return {"jsonrpc": "2.0", "id": msg_id, "result": result}, client_name
 
-        elif method == "tools/list":
-            tools = [
-                {
-                    "name": "wt_send",
-                    "description": "Send a message or data fragment to another agent in the Walkie-Talkie mesh. The recipient must already be connected (its ID appears in wt_list_agents).",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "to": {
-                                "type": "string",
-                                "description": "Target agent ID (exactly as shown by wt_list_agents) or '*' to broadcast to all other online agents."
-                            },
-                            "message": {
-                                "type": "string",
-                                "description": "The message or information to transmit."
-                            },
-                            "priority": {
-                                "type": "string",
-                                "enum": ["low", "normal", "high"],
-                                "description": "Delivery priority (default: 'normal'). High-priority messages are delivered before normal and low ones."
-                            },
-                            "agent_id": {
-                                "type": "string",
-                                "description": "Sender identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
-                            }
-                        },
-                        "required": ["to", "message"]
-                    }
-                },
-                {
-                    "name": "wt_list_agents",
-                    "description": "List all peer agents currently known to the Walkie-Talkie mesh, including their status, unread counts, and code-line totals.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "agent_id": {
-                                "type": "string",
-                                "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "wt_check_inbox",
-                    "description": "Retrieve any unread messages from other agents in the Walkie-Talkie mesh.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "clear": {
-                                "type": "boolean",
-                                "description": "Whether to mark fetched messages as read (default: true)."
-                            },
-                            "agent_id": {
-                                "type": "string",
-                                "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
-                            }
-                        }
-                    }
-                },
-                {
-                    "name": "wt_report_code",
-                    "description": "Report code changes made during this work session so the mesh tracks each agent's contribution. Call after editing files.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "lines_added": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "description": "Number of lines added."
-                            },
-                            "lines_removed": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "description": "Number of lines removed."
-                            },
-                            "files_changed": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "description": "Optional number of files touched."
-                            },
-                            "summary": {
-                                "type": "string",
-                                "description": "Optional one-line summary of the change."
-                            },
-                            "agent_id": {
-                                "type": "string",
-                                "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
-                            }
-                        },
-                        "required": ["lines_added", "lines_removed"]
-                    }
-                },
-            ]
-            return web.json_response({"jsonrpc": "2.0", "id": msg_id, "result": {"tools": tools}})
+        if method == "tools/list":
+            return {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": self._tool_schemas()}}, ""
 
-        elif method == "tools/call":
+        if method == "tools/call":
+            # Mesh actions require the caller to present an identity.
+            agent_id = self._resolve_agent_id(identities)
+            if not agent_id:
+                return self._identity_error(msg_id), ""
+            self.hub.register_or_heartbeat(agent_id)
+
             tool_name = params.get("name")
             args = arguments
 
             if tool_name == "wt_check_inbox":
                 clear = args.get("clear", True)
                 if not isinstance(clear, bool):
-                    return self._rpc_error(msg_id, -32602, "'clear' must be a boolean")
+                    return self._rpc_error(msg_id, -32602, "'clear' must be a boolean"), ""
                 messages = self.hub.drain_inbox(agent_id, clear=clear)
-                return web.json_response({
+                return {
                     "jsonrpc": "2.0",
                     "id": msg_id,
                     "result": {
                         "content": [{"type": "text", "text": json.dumps(messages, indent=2)}],
                         "messages": messages
                     }
-                })
+                }, ""
 
             if tool_name == "wt_report_code":
-                return self._handle_report_code(msg_id, agent_id, args)
+                return self._handle_report_code(msg_id, agent_id, args), ""
 
             if tool_name == "wt_send":
-                return self._handle_send(msg_id, agent_id, args)
+                return self._handle_send(msg_id, agent_id, args), ""
 
             if tool_name == "wt_list_agents":
                 # Piggyback: incoming peer messages ride along any tool result.
@@ -606,7 +512,7 @@ class MCPServer:
                 if piggybacked_msgs:
                     content_text += f"\n\n[WALKIE-TALKIE INCOMING PEER MSGS]:\n{json.dumps(piggybacked_msgs, indent=2)}"
 
-                return web.json_response({
+                return {
                     "jsonrpc": "2.0",
                     "id": msg_id,
                     "result": {
@@ -615,17 +521,111 @@ class MCPServer:
                         "code_stats": stats,
                         "_walkie_talkie_inbox": piggybacked_msgs
                     }
-                })
+                }, ""
 
             return self._rpc_error(
                 msg_id, -32601, f"Method/Tool '{tool_name}' not found"
-            )
+            ), ""
 
         return self._rpc_error(
             msg_id, -32601, f"Method '{method}' not implemented"
-        )
+        ), ""
 
-    def _handle_send(self, msg_id, agent_id: str, args: dict):
+    def _tool_schemas(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "name": "wt_send",
+                "description": "Send a message or data fragment to another agent in the Walkie-Talkie mesh. The recipient must already be connected (its ID appears in wt_list_agents).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "to": {
+                            "type": "string",
+                            "description": "Target agent ID (exactly as shown by wt_list_agents) or '*' to broadcast to all other online agents."
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "The message or information to transmit."
+                        },
+                        "priority": {
+                            "type": "string",
+                            "enum": ["low", "normal", "high"],
+                            "description": "Delivery priority (default: 'normal'). High-priority messages are delivered before normal and low ones."
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Sender identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    },
+                    "required": ["to", "message"]
+                }
+            },
+            {
+                "name": "wt_list_agents",
+                "description": "List all peer agents currently known to the Walkie-Talkie mesh, including their status, unread counts, and code-line totals.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    }
+                }
+            },
+            {
+                "name": "wt_check_inbox",
+                "description": "Retrieve any unread messages from other agents in the Walkie-Talkie mesh.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "clear": {
+                            "type": "boolean",
+                            "description": "Whether to mark fetched messages as read (default: true)."
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    }
+                }
+            },
+            {
+                "name": "wt_report_code",
+                "description": "Report code changes made during this work session so the mesh tracks each agent's contribution. Call after editing files.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lines_added": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of lines added."
+                        },
+                        "lines_removed": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of lines removed."
+                        },
+                        "files_changed": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Optional number of files touched."
+                        },
+                        "summary": {
+                            "type": "string",
+                            "description": "Optional one-line summary of the change."
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "Caller identity for this call; overrides connection-level identity (X-Agent-ID header or ?agent_id= query)."
+                        }
+                    },
+                    "required": ["lines_added", "lines_removed"]
+                }
+            },
+        ]
+
+    def _handle_send(self, msg_id, agent_id: str, args: dict) -> Dict[str, Any]:
         recipient = args.get("to", "*")
         text = args.get("message", "")
         priority = args.get("priority", "normal")
@@ -679,16 +679,16 @@ class MCPServer:
                 f"{json.dumps(piggybacked_msgs, indent=2)}"
             )
 
-        return web.json_response({
+        return {
             "jsonrpc": "2.0",
             "id": msg_id,
             "result": {
                 "content": [{"type": "text", "text": content_text}],
                 "_walkie_talkie_inbox": piggybacked_msgs
             }
-        })
+        }
 
-    def _handle_report_code(self, msg_id, agent_id: str, args: dict):
+    def _handle_report_code(self, msg_id, agent_id: str, args: dict) -> Dict[str, Any]:
         def _count(name: str, required: bool = False) -> Any:
             if name not in args:
                 return None if required else 0
@@ -733,22 +733,214 @@ class MCPServer:
             + f". Session totals for '{agent_id}': "
             + f"+{totals['added']} −{totals['removed']}."
         )
-        return web.json_response({
+        return {
             "jsonrpc": "2.0",
             "id": msg_id,
             "result": {
                 "content": [{"type": "text", "text": text}],
                 "code_totals": totals,
             }
-        })
+        }
 
     @staticmethod
-    def _rpc_error(msg_id, code: int, message: str):
-        return web.json_response({
+    def _rpc_error(msg_id, code: int, message: str) -> Dict[str, Any]:
+        return {
             "jsonrpc": "2.0",
             "id": msg_id,
             "error": {"code": code, "message": message}
-        })
+        }
+
+    # ------------------------------------------------------------------
+    # Transport 1: Streamable HTTP  (POST /mcp, JSON responses)
+    # ------------------------------------------------------------------
+
+    async def handle_mcp(self, request):
+        """Streamable HTTP transport. Requests get JSON responses directly;
+        sessions are tracked with the Mcp-Session-Id header."""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32700, "message": "Parse error"}
+            }, status=400)
+
+        if not isinstance(body, dict):
+            return web.json_response({
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32600, "message": "Invalid Request"}
+            }, status=400)
+
+        params = body.get("params")
+        if not isinstance(params, dict):
+            params = {}
+        arguments = params.get("arguments")
+        if not isinstance(arguments, dict):
+            arguments = {}
+
+        incoming_sid = request.headers.get("Mcp-Session-Id")
+        session_agent = None
+        if incoming_sid:
+            session = self.http_sessions.get(incoming_sid)
+            if session:
+                session_agent = session.get("agent_id")
+
+        identities = {
+            "header": request.headers.get("X-Agent-ID"),
+            "params": params,
+            "args": arguments,
+            "query": request.query.get("agent_id"),
+            "session": session_agent,
+        }
+        payload, client_name = self._process_jsonrpc(body, identities)
+
+        # Bind connection-level identity at initialize: explicit query wins,
+        # otherwise the client's own declared clientInfo.name.
+        if body.get("method") == "initialize":
+            bound = None
+            for candidate in (request.query.get("agent_id"), client_name):
+                if isinstance(candidate, str) and candidate.strip():
+                    bound = candidate.strip()
+                    break
+            new_sid = uuid.uuid4().hex
+            self.http_sessions[new_sid] = {"agent_id": bound}
+            return web.json_response(payload, headers={"Mcp-Session-Id": new_sid})
+
+        if incoming_sid and client_name:
+            session = self.http_sessions.get(incoming_sid)
+            if session and not session.get("agent_id"):
+                session["agent_id"] = client_name
+
+        # Notifications never receive a body.
+        if payload is None:
+            return web.Response(status=204)
+        return web.json_response(payload)
+
+    async def handle_mcp_get(self, request):
+        """Streamable HTTP GET (server-initiated stream) is not offered."""
+        return web.json_response({
+            "error": "GET /mcp is not supported. POST JSON-RPC to /mcp, or "
+                     "use the classic SSE transport at /mcp/sse."
+        }, status=405, headers={"Allow": "POST, DELETE"})
+
+    async def handle_mcp_delete(self, request):
+        """Streamable HTTP session termination."""
+        sid = request.headers.get("Mcp-Session-Id") or ""
+        self.http_sessions.pop(sid, None)
+        return web.Response(status=204)
+
+    # ------------------------------------------------------------------
+    # Transport 2: classic SSE  (GET /mcp/sse + POST /mcp/messages)
+    # ------------------------------------------------------------------
+
+    async def handle_sse(self, request):
+        """Classic SSE transport. The endpoint event advertises the POST
+        target; JSON-RPC responses are delivered as `event: message` frames
+        on this stream (as real MCP clients expect)."""
+        agent_id = (request.query.get("agent_id") or "").strip()
+        sid = uuid.uuid4().hex
+        queue: asyncio.Queue = asyncio.Queue()
+        self.sse_sessions[sid] = {"queue": queue, "agent_id": agent_id or None}
+        if agent_id:
+            self.hub.register_or_heartbeat(agent_id)
+
+        response = web.StreamResponse(
+            status=200,
+            reason='OK',
+            headers={
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            }
+        )
+        await response.prepare(request)
+
+        base = f"{request.scheme}://{request.host}"
+        endpoint = f"{base}/mcp/messages?sessionId={sid}"
+        if agent_id:
+            endpoint += "&agent_id=" + quote(agent_id)
+        await response.write(f"event: endpoint\ndata: {endpoint}\n\n".encode())
+
+        try:
+            while True:
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=5.0)
+                    await response.write(
+                        f"event: message\ndata: {payload}\n\n".encode()
+                    )
+                except asyncio.TimeoutError:
+                    bound = self.sse_sessions.get(sid, {}).get("agent_id")
+                    if bound:
+                        self.hub.register_or_heartbeat(bound)
+                    # Keep-alive heartbeat
+                    await response.write(b": keepalive\n\n")
+        except (asyncio.CancelledError, ConnectionResetError):
+            pass
+        finally:
+            record = self.sse_sessions.pop(sid, None)
+            bound = (record or {}).get("agent_id") or agent_id
+            if bound:
+                self.hub.disconnect_agent(bound)
+        return response
+
+    async def handle_mcp_messages(self, request):
+        """Classic SSE transport POST target. Requests return 202 Accepted;
+        the JSON-RPC response is written to the client's SSE stream."""
+        sid = request.query.get("sessionId") or ""
+        record = self.sse_sessions.get(sid)
+        if record is None:
+            return web.json_response({
+                "error": "Unknown or expired SSE session. Reconnect to "
+                         "/mcp/sse to obtain a fresh endpoint."
+            }, status=404)
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32700, "message": "Parse error"}
+            }, status=400)
+
+        if not isinstance(body, dict):
+            return web.json_response({
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32600, "message": "Invalid Request"}
+            }, status=400)
+
+        params = body.get("params")
+        if not isinstance(params, dict):
+            params = {}
+        arguments = params.get("arguments")
+        if not isinstance(arguments, dict):
+            arguments = {}
+
+        identities = {
+            "header": request.headers.get("X-Agent-ID"),
+            "params": params,
+            "args": arguments,
+            "query": request.query.get("agent_id"),
+            "session": record.get("agent_id"),
+        }
+        payload, client_name = self._process_jsonrpc(body, identities)
+
+        # A client that declared its name at initialize (and had no explicit
+        # ?agent_id) keeps that name as its connection identity.
+        if client_name and not record.get("agent_id"):
+            record["agent_id"] = client_name
+            self.hub.register_or_heartbeat(client_name)
+
+        if payload is not None:
+            record["queue"].put_nowait(json.dumps(payload))
+        return web.Response(status=202)
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     async def start(self):
         if self.is_running:

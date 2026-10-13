@@ -494,7 +494,8 @@ def test_sse_stream_advertises_endpoint_with_identity(server):
     assert b"HTTP/1.1 200" in head
     assert b"text/event-stream" in head
     assert b"event: endpoint" in body
-    assert b"data: /mcp?agent_id=sse-agent" in body
+    assert b"sessionId=" in body
+    assert b"agent_id=sse-agent" in body
 
 
 def test_sse_without_identity_advertises_plain_endpoint(server):
@@ -502,7 +503,120 @@ def test_sse_without_identity_advertises_plain_endpoint(server):
     blob = _sse_read_first_event(base_url, "/mcp/sse")
     _, _, body = blob.partition(b"\r\n\r\n")
     assert b"event: endpoint" in body
-    assert b"data: /mcp\n\n" in body.replace(b"\r", b"")
+    assert b"sessionId=" in body
+    assert b"agent_id=" not in body
+
+
+def test_sse_delivers_responses_on_stream(server):
+    """Classic SSE clients POST to /mcp/messages (202) and read the JSON-RPC
+    response as an `event: message` frame on the stream — the wire behaviour
+    Cline / Claude Desktop expect."""
+    import socket as socket_mod
+    import threading as threading_mod
+
+    base_url, hub, mcp = server
+    host, _, port = base_url.partition("//")[2].partition(":")
+
+    sock = socket_mod.create_connection((host, int(port)), timeout=10)
+    sock.sendall(
+        f"GET /mcp/sse?agent_id=sse-roundtrip HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\nAccept: text/event-stream\r\n\r\n".encode()
+    )
+    sock.settimeout(10)
+
+    # Read until the endpoint event arrives.
+    blob = b""
+    while b"event: endpoint" not in blob:
+        chunk = sock.recv(4096)
+        if not chunk:
+            break
+        blob += chunk
+    endpoint = blob.partition(b"data: ")[2].partition(b"\n")[0].decode().strip()
+    assert endpoint.startswith("http")
+
+    # A second agent joins the mesh so the round-trip has a recipient.
+    rpc_status, _ = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="sse-peer")
+    assert rpc_status == 200
+
+    # POST a wt_list_agents call to the advertised endpoint in the
+    # background; the response must arrive on the SSE stream.
+    def _post():
+        req = urllib.request.Request(
+            endpoint,
+            data=json.dumps({
+                "jsonrpc": "2.0", "id": 77, "method": "tools/call",
+                "params": {"name": "wt_list_agents", "arguments": {}},
+            }).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5).read()
+
+    poster = threading_mod.Thread(target=_post, daemon=True)
+    poster.start()
+
+    response_blob = b""
+    while b"event: message" not in response_blob:
+        chunk = sock.recv(4096)
+        if not chunk:
+            break
+        response_blob += chunk
+    sock.close()
+
+    assert b'"id": 77' in response_blob or b'"id":77' in response_blob
+    frame = response_blob.partition(b"data: ")[2].partition(b"\n")[0].decode()
+    payload = json.loads(frame)
+    assert payload["id"] == 77
+    assert any(
+        a["id"] == "sse-peer" for a in payload["result"]["agents"]
+    )
+
+
+def test_initialize_binds_clientinfo_name_as_identity(server):
+    """A client that can only declare clientInfo.name at initialize (no
+    headers, no query string) still gets a stable, self-chosen identity —
+    never an invented one."""
+    base_url, hub, _mcp = server
+    req = urllib.request.Request(
+        base_url + "/mcp",
+        data=json.dumps({
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "clientInfo": {"name": "cline", "version": "1.0"},
+            },
+        }).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        sid = resp.headers.get("Mcp-Session-Id")
+        assert sid, "initialize must return an Mcp-Session-Id"
+
+    # Subsequent calls on that session act as the declared client.
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    })
+    # No session header via _rpc -> still unidentified without it. Repeat
+    # with the session id manually:
+    req2 = urllib.request.Request(
+        base_url + "/mcp",
+        data=json.dumps({
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "wt_list_agents", "arguments": {}},
+        }).encode(),
+        headers={"Content-Type": "application/json", "Mcp-Session-Id": sid},
+        method="POST",
+    )
+    with urllib.request.urlopen(req2, timeout=5) as resp:
+        data = json.loads(resp.read().decode())
+    ids = {a["id"] for a in data["result"]["agents"]}
+    assert "cline" in ids
+    assert "agent-mesh" not in ids
 
 
 # ---------------------------------------------------------------------------
