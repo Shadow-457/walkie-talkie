@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/img/logo.svg" alt="Walkie-Talkie Logo" width="160">
+  <img src="assets/img/logo-full.png" alt="Walkie-Talkie Logo" width="200">
   <h1>Walkie-Talkie</h1>
   <p><strong>Instant Agent-to-Agent Mesh Communication via Model Context Protocol (MCP)</strong></p>
   <p>

@@ -38,16 +38,16 @@ HOST, PORT = _load_config()
 DISPLAY_HOST = "localhost" if HOST in ("127.0.0.1", "::1") else HOST
 MCP_URL = f"http://{DISPLAY_HOST}:{PORT}/mcp"
 
-# Theme colors (calm muted green on deep forest charcoal)
-COLOR_BG = "#10140f"          # deep forest charcoal
-COLOR_SURFACE = "#171c15"     # elevated surface
-COLOR_CARD = "#1b2119"        # card layer
-COLOR_BORDER = "#2b322a"      # soft green border
-COLOR_TEXT = "#e3e8e0"        # softened sage white
-COLOR_MUTED = "#98a294"       # muted sage
-COLOR_ACCENT = "#5f9e7f"      # calm muted green accent
-COLOR_ONLINE = "#7ec29a"      # soft sage status
-COLOR_ACCENT_SOFT = "#1d2b21"  # tinted green chip wash
+# Theme colors (cream + deep forest, matching the walkie-talkie logo)
+COLOR_BG = "#101710"          # deep forest charcoal
+COLOR_SURFACE = "#16211a"     # elevated surface
+COLOR_CARD = "#1c2b21"        # logo-green card layer
+COLOR_BORDER = "#2c3b2f"      # soft green border
+COLOR_TEXT = "#eceadf"        # warm cream white
+COLOR_MUTED = "#9db09d"       # muted sage
+COLOR_ACCENT = "#5f9e7f"      # calm forest green accent
+COLOR_ONLINE = "#8fbf9d"      # soft sage status
+COLOR_ACCENT_SOFT = "#1e2c23"  # tinted green chip wash
 
 hub = MeshHub()
 server = MCPServer(hub=hub, host=HOST, port=PORT)
@@ -88,6 +88,14 @@ def main(page: ft.Page):
     page.spacing = 0
     page.theme_mode = ft.ThemeMode.DARK
 
+    # Self-hosted Outfit (downloaded to assets/fonts/); bold texts use the
+    # separate "Outfit Bold" family (see font_family assignments below).
+    page.fonts = {
+        "Outfit": "fonts/Outfit-Regular.ttf",
+        "Outfit Bold": "fonts/Outfit-Bold.ttf",
+    }
+    page.theme = ft.Theme(font_family="Outfit")
+
     # Start MCP server automatically
     start_server_background()
 
@@ -98,7 +106,7 @@ def main(page: ft.Page):
         padding=ft.Padding.symmetric(horizontal=10, vertical=5),
         content=ft.Row([
             ft.Container(width=8, height=8, bgcolor=COLOR_ONLINE),
-            ft.Text("SERVER RUNNING", size=10, weight=ft.FontWeight.BOLD, color=COLOR_ONLINE),
+            ft.Text("SERVER RUNNING", size=10, weight=ft.FontWeight.BOLD, font_family="Outfit Bold", color=COLOR_ONLINE),
         ], spacing=8)
     )
 
@@ -120,7 +128,7 @@ def main(page: ft.Page):
         # The clipboard write itself runs client-side inside the click
         # gesture via the CopyToClipboard action; this only confirms it.
         page.show_dialog(ft.SnackBar(
-            ft.Text("Copied MCP URL to clipboard!", color=COLOR_TEXT, weight=ft.FontWeight.BOLD),
+            ft.Text("Copied MCP URL to clipboard!", color=COLOR_TEXT, weight=ft.FontWeight.BOLD, font_family="Outfit Bold"),
             bgcolor=COLOR_SURFACE,
             duration=2000
         ))
@@ -128,7 +136,7 @@ def main(page: ft.Page):
     copy_btn = ft.Button(
         content=ft.Row([
             ft.Icon(ft.Icons.CONTENT_COPY, size=15, color=COLOR_BG),
-            ft.Text("COPY URL", size=12, weight=ft.FontWeight.BOLD, color=COLOR_BG),
+            ft.Text("COPY URL", size=12, weight=ft.FontWeight.BOLD, font_family="Outfit Bold", color=COLOR_BG),
         ], spacing=8),
         action=ft.CopyToClipboard(MCP_URL),
         style=ft.ButtonStyle(
@@ -147,7 +155,7 @@ def main(page: ft.Page):
     stop_btn = ft.Button(
         content=ft.Row([
             ft.Icon(ft.Icons.LOGOUT, size=15, color=COLOR_TEXT),
-            ft.Text("DISCONNECT ALL", size=12, weight=ft.FontWeight.BOLD, color=COLOR_TEXT),
+            ft.Text("DISCONNECT ALL", size=12, weight=ft.FontWeight.BOLD, font_family="Outfit Bold", color=COLOR_TEXT),
         ], spacing=8),
         style=ft.ButtonStyle(
             shape=ft.RoundedRectangleBorder(radius=0),
@@ -165,8 +173,8 @@ def main(page: ft.Page):
         padding=ft.Padding.symmetric(horizontal=20, vertical=14),
         content=ft.Row([
             ft.Row([
-                ft.Image(src="img/logo.svg", width=26, height=26, fit=ft.BoxFit.CONTAIN),
-                ft.Text("WALKIE-TALKIE", weight=ft.FontWeight.BOLD, size=13, color=COLOR_TEXT),
+                ft.Image(src="img/logo-icon.png", width=26, height=26, fit=ft.BoxFit.CONTAIN),
+                ft.Text("WALKIE-TALKIE", weight=ft.FontWeight.BOLD, font_family="Outfit Bold", size=13, color=COLOR_TEXT),
             ], spacing=10),
             ft.VerticalDivider(width=20, color=COLOR_BORDER),
             status_chip,
@@ -243,7 +251,7 @@ def main(page: ft.Page):
     send_btn = ft.Button(
         content=ft.Row([
             ft.Icon(ft.Icons.SEND, size=15, color=COLOR_BG),
-            ft.Text("TRANSMIT", size=12, weight=ft.FontWeight.BOLD, color=COLOR_BG),
+            ft.Text("TRANSMIT", size=12, weight=ft.FontWeight.BOLD, font_family="Outfit Bold", color=COLOR_BG),
         ], spacing=8),
         style=ft.ButtonStyle(
             shape=ft.RoundedRectangleBorder(radius=0),
@@ -270,7 +278,7 @@ def main(page: ft.Page):
                         ft.Text(
                             "No agents connected yet",
                             size=12,
-                            weight=ft.FontWeight.BOLD,
+                            weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
                             color=COLOR_MUTED,
                             text_align=ft.TextAlign.CENTER
                         ),
@@ -301,7 +309,7 @@ def main(page: ft.Page):
                                 border_radius=0
                             ),
                             ft.Column([
-                                ft.Text(a["id"], weight=ft.FontWeight.BOLD, size=12, color=COLOR_TEXT),
+                                ft.Text(a["id"], weight=ft.FontWeight.BOLD, font_family="Outfit Bold", size=12, color=COLOR_TEXT),
                                 ft.Text(f"Seen: {a['last_seen']} • Unread: {a['unread_count']}", size=10, color=COLOR_MUTED),
                             ], spacing=2, expand=True),
                             ft.Container(
@@ -311,7 +319,7 @@ def main(page: ft.Page):
                                 content=ft.Text(
                                     a["status"],
                                     size=9,
-                                    weight=ft.FontWeight.BOLD,
+                                    weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
                                     color=COLOR_BG if is_on else COLOR_MUTED
                                 )
                             )
@@ -356,7 +364,7 @@ def main(page: ft.Page):
                             ft.Text(
                                 f"{m.sender} → {m.recipient}:",
                                 size=11,
-                                weight=ft.FontWeight.BOLD,
+                                weight=ft.FontWeight.BOLD, font_family="Outfit Bold",
                                 color=COLOR_ACCENT,
                                 width=170
                             ),
@@ -389,7 +397,7 @@ def main(page: ft.Page):
         content=ft.Column([
             ft.Row([
                 ft.Icon(ft.Icons.HUB, size=15, color=COLOR_ACCENT),
-                ft.Text("CONNECTED AGENTS", size=11, weight=ft.FontWeight.BOLD, color=COLOR_MUTED),
+                ft.Text("CONNECTED AGENTS", size=11, weight=ft.FontWeight.BOLD, font_family="Outfit Bold", color=COLOR_MUTED),
                 ft.Container(expand=True),
                 agents_header_text,
             ], spacing=8),
@@ -413,7 +421,7 @@ def main(page: ft.Page):
         content=ft.Column([
             ft.Row([
                 ft.Icon(ft.Icons.FORUM, size=15, color=COLOR_ACCENT),
-                ft.Text("REAL-TIME MESH LOG", size=11, weight=ft.FontWeight.BOLD, color=COLOR_MUTED),
+                ft.Text("REAL-TIME MESH LOG", size=11, weight=ft.FontWeight.BOLD, font_family="Outfit Bold", color=COLOR_MUTED),
                 ft.Container(expand=True),
                 ft.Icon(ft.Icons.BOLT, size=13, color=COLOR_ACCENT),
                 ft.Text("Piggyback Zero-Interrupt Active", size=10, color=COLOR_ACCENT),

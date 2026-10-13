@@ -29,9 +29,9 @@ flet build linux     # .deb / AppImage, per target
 
 Requirements for any packaging work:
 
-- Bundle `assets/img/logo.svg` (the GUI loads it via Flet's `assets_dir`).
-  `assets/img/logo.png` is the 512px raster render of the same SVG, used for
-  social `og:image` sharing.
+- Bundle `assets/img/logo-icon.png` and `assets/img/favicon.png` (the GUI
+  loads the icon via Flet's `assets_dir`); `assets/img/logo-full.png` /
+  `assets/img/logo.png` are the lockup and og:image renders.
 - Pin dependencies exactly for release builds (`pip freeze`-style lock) even
   though `requirements.txt` uses bounded ranges for development.
 - Verify a clean install, upgrade, and uninstall on each supported OS.

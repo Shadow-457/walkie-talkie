@@ -1,46 +1,46 @@
 /* ==========================================================================
  *  Walkie-Talkie — style.css
- *  Style Decision: Swiss / Minimalism with calm muted green accent
- *  Light Mode: Soft sage-tinted canvas (#f2f4f0 base, #fbfcfa surfaces, #1b211c text)
- *  Dark Mode: Deep forest charcoal (#131712 base, #1e241b surfaces, #e3e8e0 text)
- *  Accent: Calm muted green (#3e7a5c forest / #7fae90 sage) — single accent family
- *  Type: IBM Plex Sans (prose) + IBM Plex Mono (labels, code, UI chrome)
- *  Geometry: 0px sharp flat edges, instantaneous transitions (snappy, no animation)
+ *  Visual Identity: warm cream + deep forest green, built around the
+ *  walkie-talkie logo (two agents exchanging messages). Friendly, calm,
+ *  geometric. Type: Outfit (prose/headings) + IBM Plex Mono (labels/code).
+ *  Geometry: 0px sharp flat edges, instantaneous transitions (snappy, calm).
  *  Copyright (C) 2026 Hamza Shahbaz — GNU GPL v3.0
  *  ========================================================================== */
 
+@import url('fonts.css');
+
 :root {
-  --bg: #f2f4f0;               /* Soft sage-tinted canvas (not harsh white) */
-  --bg-subtle: #e8ece4;        /* Secondary contrast layer */
-  --bg-card: #fbfcfa;          /* Calm card surface */
-  --text: #1b211c;             /* Deep green-charcoal (no stark #000) */
-  --text-muted: #56615a;       /* Muted moss gray */
-  --border: #d2d9d1;           /* Soft architectural border */
-  --border-strong: #1b211c;    /* High contrast edge */
-  --accent: #3e7a5c;           /* Calm muted forest green highlight */
-  --accent-strong: #32624a;    /* Hover / pressed green */
-  --accent-soft: #e2ebe4;      /* Tinted green panel wash */
-  --on-accent: #f5f8f3;        /* Text on accent green */
-  --header-bg: #f2f4f0;
-  --code-bg: #161c17;          /* Deep forest terminal (both themes) */
-  --code-text: #e8ede6;
+  --bg: #f5f3ec;               /* Warm cream canvas */
+  --bg-subtle: #eceadf;        /* Secondary contrast layer */
+  --bg-card: #fbfaf5;          /* Calm card surface */
+  --text: #1d2b21;             /* Deep forest ink */
+  --text-muted: #5a6b5e;       /* Muted moss gray */
+  --border: #d8d5c8;           /* Soft architectural border */
+  --border-strong: #1d2b21;    /* High contrast edge */
+  --accent: #2f5d40;           /* Forest green (from the logo) */
+  --accent-strong: #24492f;    /* Hover / pressed green */
+  --accent-soft: #e2e8dc;      /* Tinted green panel wash */
+  --on-accent: #f5f3ec;        /* Cream text on accent green */
+  --header-bg: #f5f3ec;
+  --code-bg: #16241b;          /* Deep forest terminal (both themes) */
+  --code-text: #eceadf;
 }
 
 [data-theme="dark"] {
-  --bg: #131712;               /* Deep forest charcoal (no harsh #000) */
-  --bg-subtle: #1a1f18;        /* Subtle elevated background */
-  --bg-card: #1e241b;          /* Soft forest card layer */
-  --text: #e3e8e0;             /* Softened sage white */
-  --text-muted: #99a394;       /* Clean muted sage */
-  --border: #2c332a;           /* Gentle dark green line */
-  --border-strong: #454e42;
-  --accent: #7fae90;           /* Soft sage green (dark mode) */
-  --accent-strong: #93c3a4;    /* Hover / pressed sage */
-  --accent-soft: #1e2a22;      /* Tinted green panel wash */
-  --on-accent: #131712;        /* Text on accent green */
-  --header-bg: #131712;
-  --code-bg: #0e120d;
-  --code-text: #e8ede6;
+  --bg: #121b15;               /* Deep forest charcoal */
+  --bg-subtle: #18241b;        /* Subtle elevated background */
+  --bg-card: #1c2b21;          /* Logo-green card layer */
+  --text: #eceadf;             /* Warm cream white */
+  --text-muted: #9db09d;       /* Muted sage */
+  --border: #2c3b2f;           /* Gentle dark green line */
+  --border-strong: #46553f;
+  --accent: #8fbf9d;           /* Soft sage green (dark mode) */
+  --accent-strong: #a3cfb0;    /* Hover / pressed sage */
+  --accent-soft: #1e2c23;      /* Logo-green panel wash */
+  --on-accent: #121b15;        /* Deep text on accent green */
+  --header-bg: #121b15;
+  --code-bg: #0e1710;
+  --code-text: #eceadf;
 }
 
 /* Reset - Flat, zero radius, no animations */
@@ -69,7 +69,7 @@ html {
 }
 
 body {
-  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background-color: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -77,7 +77,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   letter-spacing: -0.015em;
 }
@@ -155,7 +155,7 @@ nav {
 }
 
 [data-theme="dark"] .nav-logo img {
-  filter: brightness(1.5) saturate(1.05);
+  border: 1px solid var(--border);
 }
 
 .nav-links {
@@ -291,6 +291,48 @@ nav {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   color: var(--text-muted);
+}
+
+.hero-logo {
+  height: 78px;
+  width: auto;
+  margin-bottom: 22px;
+}
+
+/* Error pages (404, 403, 500, 503) */
+.error-page {
+  padding: 110px 0 120px;
+  background: var(--bg);
+}
+
+.error-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 5rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+  line-height: 1;
+}
+
+.error-title {
+  font-size: 1.8rem;
+  margin-bottom: 14px;
+}
+
+.error-copy {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 520px;
+  margin: 0 auto 36px;
+  line-height: 1.75;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 /* Terminal Window */

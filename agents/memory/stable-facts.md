@@ -51,13 +51,18 @@ stops being true.
   `port=0`).
 - The website design rules are strict: flat, `border-radius: 0`,
   `transition: none` (enforced globally in `assets/css/style.css`) — do not
-  reintroduce rounded corners or animations. Palette is calm muted green
-  (Swiss/minimalism): light sage canvas `#f2f4f0` / dark forest charcoal
-  `#131712`, accent `#3e7a5c` / `#7fae90`; fonts IBM Plex Sans (prose) +
-  Mono (labels/code). Retint via the `--accent*` custom properties only.
-- Logo source of truth: `assets/img/logo.svg` (green mesh mark, flat);
-  `assets/img/logo.png` is its 512px raster render for og:image. Regenerate:
-  `rsvg-convert -w 512 -h 512 assets/img/logo.svg -o assets/img/logo.png`.
+  reintroduce rounded corners or animations. Visual identity = warm cream
+  `#f5f3ec` / deep forest `#121b15` with forest-green accent `#2f5d40` /
+  sage `#8fbf9d`, built around the user's walkie-talkie logo (two agent
+  heads). Type: **Outfit** (self-hosted, `assets/fonts/`, via
+  `assets/css/fonts.css` + `@import`) for prose/headings + IBM Plex Mono
+  (Google) for labels/code. Retint via the `--accent*` custom properties.
+- Logo files: `assets/img/logo-icon.png` (nav/GUI/favicon tile, 256px),
+  `assets/img/favicon.png` (64px), `assets/img/logo-full.png` (full lockup
+  for README), `assets/img/logo.png` (512px og:image render). Source art
+  stays outside the repo; regenerate tiles from it if the logo changes.
+- Error pages: `403.html`, `404.html` (GitHub Pages default), `500.html`,
+  `503.html` at repo root, sharing `.error-*` classes in style.css.
 - `docs/*.html` are public user docs; Markdown subfolders in `docs/` are
   engineering docs (`docs/decisions/0002`).
 

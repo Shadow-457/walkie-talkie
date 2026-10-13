@@ -109,8 +109,8 @@ def test_logo_asset_path_is_relative_to_assets_dir(stub_page):
     import flet as ft
     images = [c for c in _collect_added(stub_page) if isinstance(c, ft.Image)]
     assert images, "GUI must render the logo"
-    # assets/img/logo.svg exists; Flet resolves src relative to assets/.
-    assert images[0].src == "img/logo.svg"
+    # assets/img/logo-icon.png exists; Flet resolves src relative to assets/.
+    assert images[0].src == "img/logo-icon.png"
     import os
     assert os.path.exists(os.path.join(os.path.dirname(main_mod.__file__),
                                        "assets", images[0].src))
