@@ -116,28 +116,44 @@ def test_logo_asset_path_is_relative_to_assets_dir(stub_page):
                                        "assets", images[0].src))
 
 
-def test_manual_send_with_empty_inputs_is_a_no_op(stub_page, monkeypatch):
+def test_gui_has_no_send_capability(stub_page, monkeypatch):
+    """The operator is a read-only observer: no TRANSMIT box, no send path."""
     main_mod.main(stub_page)
 
+    import flet as ft
+    controls = _collect_added(stub_page)
+    buttons = [c for c in controls if isinstance(c, ft.Button)]
+    labels = [_button_label(b) for b in buttons]
+    assert "TRANSMIT" not in labels
+
+    # No free-text message input exists besides the read-only MCP URL field.
+    text_fields = [c for c in controls
+                   if isinstance(c, ft.TextField) and not c.read_only]
+    assert text_fields == []
+
+    # Even if the message box were abused, the GUI never calls the hub's
+    # send path.
     sent = []
     monkeypatch.setattr(main_mod.hub, "send_message",
                         lambda **kw: sent.append(kw) or True)
-    import flet as ft
-    buttons = [c for c in _collect_added(stub_page) if isinstance(c, ft.Button)]
-    transmit = next(b for b in buttons if _button_label(b) == "TRANSMIT")
-    transmit.on_click(MagicMock())  # no inputs touched -> must not raise
+    for button in buttons:
+        if callable(getattr(button, "on_click", None)):
+            button.on_click(MagicMock())
     assert sent == []
 
 
-def test_disconnect_all_button_marks_agents_offline(stub_page):
+def test_clicking_agent_row_loads_its_chat(stub_page):
     main_mod.main(stub_page)
-    main_mod.hub.register_or_heartbeat("test-agent")
+    main_mod.hub.register_or_heartbeat("chat-agent")
+    main_mod.hub.send_message("chat-agent", "*", "hello mesh")
+
+    # Trigger a synchronous re-render (the async poll loop is mocked here).
+    main_mod._ui_refresh()
 
     import flet as ft
-    buttons = [c for c in _collect_added(stub_page) if isinstance(c, ft.Button)]
-    stop = next(b for b in buttons if _button_label(b) == "DISCONNECT ALL")
-    stop.on_click(MagicMock())
-    assert main_mod.hub.get_connected_agents()[0]["status"] == "OFFLINE"
+    controls = _collect_added(stub_page)
+    texts = [c.value for c in controls if isinstance(c, ft.Text)]
+    assert "chat-agent" in texts, "connected agent id must appear in the list"
 
 
 def test_gui_uses_icons(stub_page):
@@ -155,7 +171,7 @@ def test_gui_uses_icons(stub_page):
         if isinstance(b.content, ft.Row):
             if any(isinstance(ch, ft.Icon) for ch in b.content.controls):
                 icon_buttons += 1
-    assert icon_buttons >= 3  # COPY URL, DISCONNECT ALL, TRANSMIT
+    assert icon_buttons >= 1  # COPY URL
 
 
 def test_ui_poll_loop_task_is_scheduled(stub_page):

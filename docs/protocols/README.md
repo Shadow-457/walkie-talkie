@@ -42,10 +42,12 @@ Precedence, highest first:
 2. `params.agent_id`
 3. `params.arguments.agent_id` (the optional `agent_id` tool argument)
 4. `?agent_id=` query string (preserved by the SSE endpoint event)
-5. fallback: `agent-mesh` (shared identity!)
 
-Two clients that set no identity share the `agent-mesh` inbox. Configure a
-distinct `agent_id` per agent (recommended: the SSE query parameter).
+There is **no fallback identity**. A `tools/call` without any of the above is
+rejected with JSON-RPC error `-32001`. The server never invents, merges, or
+assigns agent IDs or roles — each agent is exactly the ID it presents.
+Configure a distinct `agent_id` per agent (recommended: the SSE query
+parameter).
 
 ## JSON-RPC methods
 
@@ -54,7 +56,7 @@ Requests: `{"jsonrpc": "2.0", "id": <any>, "method": "...", "params": {...}}`
 | Method | Behaviour |
 |---|---|
 | `initialize` | Returns `protocolVersion: "2024-11-05"`, `capabilities.tools`, `serverInfo {name: "Walkie-Talkie Mesh", version}`. |
-| `tools/list` | Returns the three tools below with JSON Schemas. |
+| `tools/list` | Returns the four tools below with JSON Schemas. |
 | `tools/call` | Dispatches a tool (see below). |
 | `notifications/*` | Accepted with HTTP `204`, no JSON-RPC body (notifications never get responses). |
 
@@ -66,7 +68,7 @@ Unknown methods → JSON-RPC error `-32601`.
 
 | Argument | Type | Required | Notes |
 |---|---|---|---|
-| `to` | string | yes (schema) | Target agent id; `*` or `all` broadcasts to other ONLINE agents. Missing → treated as `*`. |
+| `to` | string | yes (schema) | Target agent id; `*` or `all` broadcasts to other ONLINE agents. Missing → treated as `*`. Recipients that have never connected are rejected with `-32602` (no placeholder agents are created). |
 | `message` | string | yes | Non-empty after trimming; empty/whitespace/non-string → `-32602`. |
 | `priority` | `low`\|`normal`\|`high` | no (default `normal`) | Delivery order inside the recipient inbox: high before normal before low; FIFO within a level. Invalid value → `-32602`. |
 | `agent_id` | string | no | Per-call identity (see precedence). |
@@ -77,7 +79,8 @@ caller's pending peer messages drained as part of this call (piggyback).
 #### `wt_list_agents`
 
 No required arguments (optional `agent_id`). Result includes `agents[]`
-(`id`, `status`, `connected_at`, `last_seen`, `unread_count`) and
+(`id`, `status`, `connected_at`, `last_seen`, `unread_count`, `lines_added`,
+`lines_removed`), `code_stats` (per-agent and mesh totals), and
 `_walkie_talkie_inbox` (pending messages drained by this call).
 
 #### `wt_check_inbox`
@@ -88,6 +91,18 @@ No required arguments (optional `agent_id`). Result includes `agents[]`
 | `agent_id` | string | no | Per-call identity. |
 
 Result: `messages[]` — each `{from, to, message, timestamp, priority}`.
+
+#### `wt_report_code`
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `lines_added` | integer ≥ 0 | yes | Lines added. Negative/bool/float/missing → `-32602`. |
+| `lines_removed` | integer ≥ 0 | yes | Lines removed. Negative/bool/float/missing → `-32602`. |
+| `files_changed` | integer ≥ 0 | no (default 0) | Files touched. Invalid → `-32602`. |
+| `summary` | string | no | One-line description, trimmed to 300 chars. Non-string → `-32602`. |
+| `agent_id` | string | no | Per-call identity. |
+
+Result: `code_totals` — the caller's accumulated `{added, removed, files}`.
 
 ### Message envelope
 
@@ -104,6 +119,7 @@ Result: `messages[]` — each `{from, to, message, timestamp, priority}`.
 | `-32600` | 400 | Invalid Request (body is not a JSON object). |
 | `-32601` | 200 | Method or tool not found. |
 | `-32602` | 200 | Invalid params (validation failure — see tools). |
+| `-32001` | 200 | Unidentified agent: a `tools/call` arrived with no identity (see Caller identity). |
 
 ## Compatibility expectations
 

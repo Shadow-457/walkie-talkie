@@ -162,14 +162,16 @@ def test_initialize_returns_protocol_info(server):
     assert "tools" in data["result"]["capabilities"]
 
 
-def test_tools_list_exposes_three_wt_tools_with_schemas(server):
+def test_tools_list_exposes_four_wt_tools_with_schemas(server):
     base_url, _hub, _mcp = server
     _status, data = _rpc(base_url, {
         "jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {},
     }, agent_id="list-agent")
 
     tools = {t["name"]: t for t in data["result"]["tools"]}
-    assert set(tools) == {"wt_send", "wt_list_agents", "wt_check_inbox"}
+    assert set(tools) == {
+        "wt_send", "wt_list_agents", "wt_check_inbox", "wt_report_code",
+    }
 
     send_schema = tools["wt_send"]["inputSchema"]
     assert send_schema["required"] == ["to", "message"]
@@ -202,7 +204,7 @@ def test_unknown_tool_returns_method_not_found(server):
     status, data = _rpc(base_url, {
         "jsonrpc": "2.0", "id": 10, "method": "tools/call",
         "params": {"name": "wt_nope", "arguments": {}},
-    })
+    }, agent_id="tool-prober")
     assert status == 200
     assert data["error"]["code"] == -32601
 
@@ -236,6 +238,12 @@ def test_non_object_body_returns_invalid_request(server):
 def test_send_then_check_inbox_roundtrip(server):
     base_url, _hub, _mcp = server
 
+    # The receiver must be present in the mesh before delivery.
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="receiver")
+
     status, data = _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_send",
@@ -264,6 +272,10 @@ def test_send_then_check_inbox_roundtrip(server):
 
 def test_check_inbox_clear_false_does_not_dequeue(server):
     base_url, _hub, _mcp = server
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="peeker")
     _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_send", "arguments": {"to": "peeker", "message": "x"}},
@@ -294,13 +306,18 @@ def test_check_inbox_rejects_non_boolean_clear(server):
     status, data = _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_check_inbox", "arguments": {"clear": "yes"}},
-    })
+    }, agent_id="peeker-2")
     assert status == 200
     assert data["error"]["code"] == -32602
 
 
 def test_pending_messages_piggyback_on_next_tool_result(server):
     base_url, _hub, _mcp = server
+    # busy-agent joins the mesh first, then goes to work.
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="busy-agent")
     _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_send",
@@ -328,6 +345,11 @@ def test_pending_messages_piggyback_on_next_tool_result(server):
 
 def test_failed_wt_send_does_not_consume_inbox(server):
     base_url, _hub, _mcp = server
+    # victim and peer both connect up front.
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="victim")
     _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_send", "arguments": {"to": "victim", "message": "keep me"}},
@@ -349,6 +371,12 @@ def test_failed_wt_send_does_not_consume_inbox(server):
 
 def test_wt_send_validates_arguments(server):
     base_url, _hub, _mcp = server
+    # Recipient must be known so the unknown-recipient check does not mask
+    # argument validation.
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 98, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="a")
 
     bad_calls = [
         {"to": "", "message": "x"},                        # empty recipient
@@ -361,7 +389,7 @@ def test_wt_send_validates_arguments(server):
         status, data = _rpc(base_url, {
             "jsonrpc": "2.0", "id": i, "method": "tools/call",
             "params": {"name": "wt_send", "arguments": arguments},
-        })
+        }, agent_id="validator")
         assert status == 200
         assert data["error"]["code"] == -32602, arguments
 
@@ -371,7 +399,7 @@ def test_wt_send_rejects_non_object_arguments(server):
     status, data = _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_send", "arguments": "not-a-dict"},
-    })
+    }, agent_id="dict-tester")
     assert status == 200
     # arguments falls back to {} -> missing 'message' -> invalid params
     assert data["error"]["code"] == -32602
@@ -379,6 +407,12 @@ def test_wt_send_rejects_non_object_arguments(server):
 
 def test_priority_orders_delivery_over_http(server):
     base_url, _hub, _mcp = server
+    # The recipient must exist before messages can be delivered to it.
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 50, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="target")
+
     for i, (message, priority) in enumerate([
         ("normal-1", "normal"),
         ("normal-2", "normal"),
@@ -431,6 +465,13 @@ def test_identity_via_argument_and_query(server):
 
 def test_wt_list_agents_reports_unread_counts(server):
     base_url, _hub, _mcp = server
+    # Both parties must be known before delivery works.
+    for aid in ("a", "b", "observer"):
+        _rpc(base_url, {
+            "jsonrpc": "2.0", "id": 0, "method": "tools/call",
+            "params": {"name": "wt_list_agents", "arguments": {}},
+        }, agent_id=aid)
+
     _rpc(base_url, {
         "jsonrpc": "2.0", "id": 1, "method": "tools/call",
         "params": {"name": "wt_send", "arguments": {"to": "b", "message": "1"}},
@@ -462,6 +503,115 @@ def test_sse_without_identity_advertises_plain_endpoint(server):
     _, _, body = blob.partition(b"\r\n\r\n")
     assert b"event: endpoint" in body
     assert b"data: /mcp\n\n" in body.replace(b"\r", b"")
+
+
+# ---------------------------------------------------------------------------
+# Strict identity policy (no invented agents, no role assignment)
+# ---------------------------------------------------------------------------
+
+def test_unidentified_calls_are_rejected_with_dedicated_error(server):
+    base_url, hub, _mcp = server
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    })
+    assert status == 200
+    assert data["error"]["code"] == MCPServer.IDENTITY_ERROR_CODE
+    assert "does not assign" in data["error"]["message"]
+    assert hub.get_connected_agents() == []
+
+
+def test_send_to_unknown_recipient_returns_error_without_creating_agent(server):
+    base_url, hub, _mcp = server
+    status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_send",
+                   "arguments": {"to": "ghost-agent", "message": "anyone?"}},
+    }, agent_id="real-agent")
+    assert status == 200
+    assert data["error"]["code"] == -32602
+    assert "Unknown recipient" in data["error"]["message"]
+    # Only the sender exists; no placeholder was fabricated.
+    assert {a["id"] for a in hub.get_connected_agents()} == {"real-agent"}
+
+
+def test_no_shared_fallback_identity_is_ever_created(server):
+    base_url, hub, _mcp = server
+    for method, params in (
+        ("initialize", {}),
+        ("tools/list", {}),
+        ("tools/call", {"name": "wt_list_agents", "arguments": {}}),
+    ):
+        _rpc(base_url, {"jsonrpc": "2.0", "id": 1, "method": method,
+                        "params": params})
+    ids = {a["id"] for a in hub.get_connected_agents()}
+    assert "agent-mesh" not in ids
+    assert ids == set()  # nothing registered at all
+
+
+# ---------------------------------------------------------------------------
+# wt_report_code — code contribution statistics
+# ---------------------------------------------------------------------------
+
+def test_report_code_accumulates_and_returns_totals(server):
+    base_url, hub, _mcp = server
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_report_code", "arguments": {
+            "lines_added": 120, "lines_removed": 30, "files_changed": 4,
+            "summary": "feat: mesh router"}},
+    }, agent_id="builder")
+    _status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "wt_report_code", "arguments": {
+            "lines_added": 10, "lines_removed": 60}},
+    }, agent_id="builder")
+
+    totals = data["result"]["code_totals"]
+    assert totals == {"added": 130, "removed": 90, "files": 4}
+
+    _status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="observer-x")
+    by_id = {a["id"]: a for a in data["result"]["agents"]}
+    assert by_id["builder"]["lines_added"] == 130
+    assert by_id["builder"]["lines_removed"] == 90
+
+
+def test_report_code_validates_arguments(server):
+    base_url, _hub, _mcp = server
+    bad_calls = [
+        {"lines_added": -1, "lines_removed": 0},      # negative
+        {"lines_added": True, "lines_removed": 0},    # bool is not a count
+        {"lines_added": 1.5, "lines_removed": 0},     # float
+        {"lines_removed": 5},                          # missing added
+        {"lines_added": 5, "lines_removed": 0, "summary": 42},
+    ]
+    for i, arguments in enumerate(bad_calls):
+        status, data = _rpc(base_url, {
+            "jsonrpc": "2.0", "id": i, "method": "tools/call",
+            "params": {"name": "wt_report_code", "arguments": arguments},
+        }, agent_id="validator")
+        assert status == 200
+        assert data["error"]["code"] == -32602, arguments
+
+
+def test_code_stats_shape_in_list_agents(server):
+    base_url, _hub, _mcp = server
+    _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+        "params": {"name": "wt_report_code", "arguments": {
+            "lines_added": 3, "lines_removed": 1}},
+    }, agent_id="stats-agent")
+
+    _status, data = _rpc(base_url, {
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "wt_list_agents", "arguments": {}},
+    }, agent_id="stats-agent")
+    stats = data["result"]["code_stats"]
+    assert stats["total"]["lines_added"] == 3
+    assert stats["total"]["lines_removed"] == 1
 
 
 

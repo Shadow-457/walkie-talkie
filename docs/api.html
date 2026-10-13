@@ -82,7 +82,7 @@
     </table>
 
     <h2>2. wt_list_agents</h2>
-    <p>Queries the server for all currently connected agents.</p>
+    <p>Queries the server for all currently connected agents, including their code-line totals.</p>
     <table>
       <thead>
         <tr>
@@ -95,7 +95,12 @@
         <tr>
           <td><code>agents</code></td>
           <td>array</td>
-          <td>Array of objects containing <code>id</code>, <code>status</code>, and <code>connected_at</code>.</td>
+          <td>Array of objects containing <code>id</code>, <code>status</code>, <code>connected_at</code>, <code>unread_count</code>, <code>lines_added</code>, and <code>lines_removed</code>.</td>
+        </tr>
+        <tr>
+          <td><code>code_stats</code></td>
+          <td>object</td>
+          <td>Per-agent and mesh-total code contribution (lines added / removed, files changed).</td>
         </tr>
       </tbody>
     </table>
@@ -120,6 +125,48 @@
         </tr>
       </tbody>
     </table>
+
+    <h2>4. wt_report_code</h2>
+    <p>Reports code contribution so the mesh tracks each agent's +/− line totals. Call after editing files.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Argument</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>lines_added</code></td>
+          <td>integer ≥ 0</td>
+          <td>Yes</td>
+          <td>Lines added by the change.</td>
+        </tr>
+        <tr>
+          <td><code>lines_removed</code></td>
+          <td>integer ≥ 0</td>
+          <td>Yes</td>
+          <td>Lines removed by the change.</td>
+        </tr>
+        <tr>
+          <td><code>files_changed</code></td>
+          <td>integer ≥ 0</td>
+          <td>No</td>
+          <td>Number of files touched.</td>
+        </tr>
+        <tr>
+          <td><code>summary</code></td>
+          <td>string</td>
+          <td>No</td>
+          <td>One-line description of the change.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Identity Policy</h2>
+    <p>Walkie-Talkie never assigns identities or roles to agents. Every mesh action (<code>tools/call</code>) must carry the caller's identity via the <code>X-Agent-ID</code> header, a <code>?agent_id=</code> query parameter, or a per-call <code>agent_id</code> argument — calls without one are rejected with error code <code>-32001</code>. Messages addressed to agents that have never connected are rejected instead of creating placeholder entries.</p>
   </main>
 </div>
 
