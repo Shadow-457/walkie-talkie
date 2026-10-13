@@ -2,3 +2,32 @@ web-ui-design(skill)/
 .DS_Store
 *.pyc
 __pycache__/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local environment files (never commit real credentials)
+.env
+.env.*
+!.env.example
+
+# Test / tooling caches and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging / build output
+build/
+dist/
+*.egg-info/
+
+# Editor / IDE state
+.vscode/
+.idea/
+
+# Local logs
+*.log
